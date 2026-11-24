@@ -10,6 +10,7 @@ import { useAuth } from '../contexto/AuthContext';
 import PanelAccesibilidad from './PanelAccesibilidad';
 import Footer from './Footer';
 import ErrorBoundary from './ErrorBoundary';
+import { LogoHorizontal } from './Logo';
 
 // Íconos disponibles para el menú (el nombre se guarda en la columna menus.icono)
 const ICONOS = {
@@ -41,7 +42,7 @@ function MenuLateral({ onNavegar }) {
                                     onClick={onNavegar}
                                     className={({ isActive }) =>
                                         `flex items-center gap-3 rounded-tema px-3 py-2 text-sm font-medium transition ${
-                                            isActive ? 'bg-primario text-sobre-primario' : 'text-texto hover:bg-superficie-2'
+                                            isActive ? 'bg-primario text-sobre-primario shadow-sm [box-shadow:inset_3px_0_0_var(--marca-rojo)]' : 'text-texto hover:bg-superficie-2'
                                         }`
                                     }
                                 >
@@ -164,15 +165,10 @@ export default function Layout() {
 
             {/* Barra lateral */}
             <aside className={`fixed inset-y-0 left-0 z-40 w-64 overflow-y-auto border-r border-borde bg-superficie transition-transform lg:translate-x-0 ${menuMovil ? 'translate-x-0' : '-translate-x-full'}`}>
-                <div className="flex h-16 items-center justify-between border-b border-borde px-4">
-                    <Link to="/" className="flex items-center gap-2 font-bold text-primario">
-                        <span className="grid size-9 place-items-center rounded-tema bg-primario text-sobre-primario">
-                            <Monitor className="size-5" aria-hidden />
-                        </span>
-                        <span className="leading-tight">
-                            Laboratorios
-                            <span className="block text-xs font-medium text-suave">FICCT · UAGRM</span>
-                        </span>
+                <div className="barra-marca" aria-hidden />
+                <div className="flex h-[4.5rem] items-center justify-between border-b border-borde px-4">
+                    <Link to="/" aria-label="Laboratorios 4to Piso - inicio">
+                        <LogoHorizontal />
                     </Link>
                     <button className="btn btn-fantasma btn-sm lg:hidden" onClick={() => setMenuMovil(false)} aria-label="Cerrar menú">
                         <X className="size-5" />
@@ -183,7 +179,7 @@ export default function Layout() {
             {menuMovil && <div className="fixed inset-0 z-30 bg-black/40 lg:hidden" onClick={() => setMenuMovil(false)} />}
 
             {/* Encabezado */}
-            <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-borde bg-superficie/95 px-4 backdrop-blur">
+            <header className="sticky top-0 z-20 flex h-[4.5rem] items-center gap-3 border-b border-borde bg-superficie/95 px-4 backdrop-blur">
                 <button className="btn btn-fantasma btn-sm lg:hidden" onClick={() => setMenuMovil(true)} aria-label="Abrir menú">
                     <MenuIcon className="size-5" />
                 </button>

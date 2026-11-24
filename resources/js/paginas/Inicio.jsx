@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 import { useAuth } from '../contexto/AuthContext';
 import { Icono } from '../componentes/Layout';
+import { Isotipo } from '../componentes/Logo';
 
 /** Página de inicio: accesos directos generados desde el mismo menú dinámico del rol */
 export default function Inicio() {
@@ -12,10 +13,12 @@ export default function Inicio() {
 
     return (
         <>
-            <section className="tarjeta mb-6 overflow-hidden bg-primario p-6 text-sobre-primario sm:p-8">
-                <p className="opacity-90">{saludo},</p>
-                <h1 className="text-3xl font-bold">{usuario.nombre_completo}</h1>
-                <p className="mt-2 max-w-2xl opacity-90">
+            <section className="tarjeta fondo-circuito relative mb-6 overflow-hidden border-0 p-6 text-white sm:p-8">
+                <Isotipo variante="claro" className="pointer-events-none absolute -right-6 -bottom-8 h-56 w-auto opacity-15" titulo="" />
+                <p className="font-[Montserrat] text-xs font-semibold tracking-[0.25em] text-[#7FC3E0] uppercase">Laboratorios 4to Piso · FICCT</p>
+                <p className="mt-3 opacity-90">{saludo},</p>
+                <h1 className="!text-4xl !text-white">{usuario.nombre_completo}</h1>
+                <p className="relative mt-2 max-w-2xl opacity-90">
                     Ingresó como <strong>{usuario.rol?.nombre}</strong>. Estas son las opciones habilitadas para su rol.
                 </p>
             </section>

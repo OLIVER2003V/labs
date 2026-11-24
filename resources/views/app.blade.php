@@ -3,12 +3,13 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="Sistema de Gestión de Laboratorios FICCT - UAGRM">
-    <title>Laboratorios FICCT</title>
+    <meta name="description" content="Sistema de Gestión Laboratorios 4to Piso - FICCT UAGRM">
+    <title>Laboratorios 4to Piso · FICCT - UAGRM</title>
+    <meta name="theme-color" content="#0F2A4A">
     <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700&family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700&family=Barlow+Condensed:wght@600;700&family=Inter:wght@400;500;600;700&family=Montserrat:wght@500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script>
         // Configuración que React necesita para funcionar en cualquier carpeta del servidor
         // (ej: /inf513/grupo08sa/proyecto2). Se calcula en el servidor con url().

@@ -33,59 +33,62 @@
     --color-info: var(--c-info);
     --color-info-tenue: var(--c-info-tenue);
     --font-sans: var(--fuente-tema);
+    --font-titulo: var(--fuente-titulos);
     --radius-tema: var(--radio);
 }
 
-/* ---------- ADULTOS (sobrio, institucional) ---------- */
+/* ---------- ADULTOS (identidad de marca "Laboratorios 4to Piso": azul marino, rojo y celeste) ---------- */
 :root,
 [data-tema='adultos'] {
     --fuente-tema: 'Inter', ui-sans-serif, system-ui, 'Segoe UI', sans-serif;
+    --fuente-titulos: 'Barlow Condensed', 'Oswald', 'Arial Narrow', sans-serif;
     --radio: 0.5rem;
-    --c-fondo: #f4f6f9;
+    --c-fondo: #f3f6fa;
     --c-superficie: #ffffff;
-    --c-superficie-2: #eef1f6;
-    --c-borde: #d5dbe5;
-    --c-texto: #172033;
-    --c-suave: #56607a;
-    --c-primario: #1d4e89;
-    --c-primario-hover: #163d6c;
+    --c-superficie-2: #eaf0f6;
+    --c-borde: #d3dce7;
+    --c-texto: #0f1d30;
+    --c-suave: #4d5e75;
+    --c-primario: #0f2a4a;
+    --c-primario-hover: #0a1e36;
     --c-sobre-primario: #ffffff;
-    --c-primario-tenue: #e3ecf7;
-    --c-acento: #0f8b8d;
+    --c-primario-tenue: #e1ebf5;
+    --c-acento: #e5432f;
     --c-exito: #1e7b4c;
     --c-exito-tenue: #e2f4ea;
     --c-alerta: #9a6100;
     --c-alerta-tenue: #fff3d6;
-    --c-peligro: #b3261e;
-    --c-peligro-tenue: #fde7e5;
-    --c-info: #1f6fb2;
-    --c-info-tenue: #e2effa;
+    --c-peligro: #c4321f;
+    --c-peligro-tenue: #fde7e4;
+    --c-info: #1d6fa5;
+    --c-info-tenue: #e0f0f9;
 }
 [data-tema='adultos'][data-modo='oscuro'] {
-    --c-fondo: #0f1520;
-    --c-superficie: #182131;
-    --c-superficie-2: #212c3f;
-    --c-borde: #33405a;
-    --c-texto: #e7ecf4;
-    --c-suave: #a3aec4;
-    --c-primario: #6aa5e8;
-    --c-primario-hover: #8cbbf0;
-    --c-sobre-primario: #0b1422;
-    --c-primario-tenue: #1d3352;
-    --c-acento: #4fc7c9;
+    --c-fondo: #08121f;
+    --c-superficie: #0f1d30;
+    --c-superficie-2: #16273e;
+    --c-borde: #263b57;
+    --c-texto: #e8eff7;
+    --c-suave: #9fb1c7;
+    --c-primario: #7fc3e0;
+    --c-primario-hover: #a3d5ea;
+    --c-sobre-primario: #08121f;
+    --c-primario-tenue: #15324a;
+    --c-acento: #ff6b57;
     --c-exito: #5fd497;
     --c-exito-tenue: #173b2a;
     --c-alerta: #f2bd55;
     --c-alerta-tenue: #3b2f14;
-    --c-peligro: #f2867e;
-    --c-peligro-tenue: #43201e;
-    --c-info: #79b8ef;
-    --c-info-tenue: #193551;
+    --c-peligro: #ff8a7a;
+    --c-peligro-tenue: #45201b;
+    --c-info: #7fc3e0;
+    --c-info-tenue: #15324a;
 }
 
 /* ---------- JÓVENES (vibrante, moderno) ---------- */
 [data-tema='jovenes'] {
     --fuente-tema: 'Poppins', ui-sans-serif, system-ui, sans-serif;
+    --fuente-titulos: 'Poppins', ui-sans-serif, sans-serif;
     --radio: 0.9rem;
     --c-fondo: #f6f3ff;
     --c-superficie: #ffffff;
@@ -132,6 +135,7 @@
 /* ---------- NIÑOS (cálido, redondeado, más grande) ---------- */
 [data-tema='ninos'] {
     --fuente-tema: 'Baloo 2', 'Comic Sans MS', ui-rounded, system-ui, sans-serif;
+    --fuente-titulos: 'Baloo 2', ui-rounded, sans-serif;
     --radio: 1.4rem;
     --c-fondo: #fff8ec;
     --c-superficie: #ffffff;
@@ -313,4 +317,33 @@ body {
         transition: none !important;
         animation: none !important;
     }
+}
+
+/* ---------- Detalles de marca ---------- */
+:root {
+    --marca-azul: #0f2a4a;
+    --marca-rojo: #e5432f;
+    --marca-celeste: #7fc3e0;
+}
+h1, h2.titulo-seccion, .font-titulo {
+    font-family: var(--fuente-titulos);
+}
+[data-tema='adultos'] main h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
+    line-height: 1.05;
+}
+/* Fondo con trama de circuito (paneles de marca) */
+.fondo-circuito {
+    background-color: var(--marca-azul);
+    background-image:
+        radial-gradient(circle at 1px 1px, rgb(127 195 224 / 0.18) 1.2px, transparent 0),
+        linear-gradient(135deg, #0f2a4a 0%, #14375f 55%, #0b2038 100%);
+    background-size: 22px 22px, 100% 100%;
+}
+.barra-marca {
+    background: linear-gradient(90deg, var(--marca-azul) 0 60%, var(--marca-rojo) 60% 80%, var(--marca-celeste) 80% 100%);
+    height: 4px;
 }

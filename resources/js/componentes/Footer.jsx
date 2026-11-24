@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Eye } from 'lucide-react';
 import api from '../lib/api';
+import { Isotipo } from './Logo';
 
 /**
  * Pie de página con CONTADOR DE VISITAS persistente por página.
@@ -20,7 +21,7 @@ export default function Footer() {
     return (
         <footer className="border-t border-borde px-4 py-4 text-sm text-suave sm:px-6">
             <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2">
-                <p>© {new Date().getFullYear()} Laboratorios FICCT · UAGRM — Tecnología Web INF513 · Grupo 08 SA</p>
+                <p className="flex items-center gap-2"><Isotipo className="h-6 w-auto" titulo="" /> © {new Date().getFullYear()} Laboratorios 4to Piso · FICCT - UAGRM — INF513 · Grupo 08 SA</p>
                 <p className={`flex items-center gap-1.5 ${visitas === null ? 'invisible' : ''}`} aria-live="polite">
                     <Eye className="size-4" aria-hidden />
                     {visitas === null ? null : (

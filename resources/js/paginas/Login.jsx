@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { CalendarCheck, Eye, EyeOff, Loader2, LogIn, Monitor, ShieldCheck, Wrench } from 'lucide-react';
+import { CalendarCheck, Eye, EyeOff, Loader2, LogIn, ShieldCheck, Wrench } from 'lucide-react';
+import { Isotipo, LogoCompleto } from '../componentes/Logo';
 import { useAuth } from '../contexto/AuthContext';
 import { useTema } from '../contexto/TemaContext';
 import { mensajeError } from '../lib/api';
@@ -47,27 +48,22 @@ export default function Login() {
                 <PanelAccesibilidad />
             </div>
             <div className="grid flex-1 lg:grid-cols-2">
-                <section className="hidden flex-col justify-center gap-8 bg-primario p-12 text-sobre-primario lg:flex">
-                    <div className="flex items-center gap-3">
-                        <span className="grid size-14 place-items-center rounded-tema bg-sobre-primario/15">
-                            <Monitor className="size-8" aria-hidden />
-                        </span>
-                        <div>
-                            <p className="text-2xl font-bold">Laboratorios FICCT</p>
-                            <p className="opacity-80">Universidad Autónoma Gabriel René Moreno</p>
-                        </div>
-                    </div>
-                    <h1 className="max-w-md text-4xl leading-tight font-bold">Reservas, horarios e inventario de los laboratorios en un solo lugar.</h1>
-                    <ul className="flex max-w-md flex-col gap-4 opacity-95">
-                        <li className="flex gap-3"><CalendarCheck className="size-6 shrink-0" aria-hidden /> Consulte la disponibilidad y solicite reservas sin choques de horario.</li>
-                        <li className="flex gap-3"><Wrench className="size-6 shrink-0" aria-hidden /> Reporte fallas de equipos y siga su atención.</li>
-                        <li className="flex gap-3"><ShieldCheck className="size-6 shrink-0" aria-hidden /> Cada operación queda registrada con su responsable.</li>
+                <section className="fondo-circuito relative hidden flex-col justify-between overflow-hidden p-12 text-white lg:flex">
+                    <div className="barra-marca absolute inset-x-0 top-0" aria-hidden />
+                    <LogoCompleto variante="claro" className="mt-10" />
+                    <ul className="mx-auto flex max-w-md flex-col gap-4 text-white/90">
+                        <li className="flex gap-3"><CalendarCheck className="size-6 shrink-0 text-[#7FC3E0]" aria-hidden /> Consulte la disponibilidad y solicite reservas sin choques de horario.</li>
+                        <li className="flex gap-3"><Wrench className="size-6 shrink-0 text-[#7FC3E0]" aria-hidden /> Reporte fallas de equipos y siga su atención.</li>
+                        <li className="flex gap-3"><ShieldCheck className="size-6 shrink-0 text-[#7FC3E0]" aria-hidden /> Cada operación queda registrada con su responsable.</li>
                     </ul>
+                    <p className="text-center text-xs text-white/60">Facultad de Ingeniería en Ciencias de la Computación y Telecomunicaciones</p>
                 </section>
 
                 <section className="flex items-center justify-center p-6">
                     <div className="w-full max-w-md">
-                        <h2 className="text-3xl font-bold">Iniciar sesión</h2>
+                        <Isotipo className="mb-6 h-20 w-auto lg:hidden" />
+                        <p className="font-[Montserrat] text-xs font-semibold tracking-[0.25em] text-acento uppercase">Laboratorios 4to Piso</p>
+                        <h2 className="mt-1 font-titulo text-4xl font-bold uppercase">Iniciar sesión</h2>
                         <p className="mt-1 text-suave">Ingrese con su correo institucional.</p>
 
                         {error && (
