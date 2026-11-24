@@ -54,10 +54,10 @@ export default function PanelAccesibilidad({ alineacion = 'right-0' }) {
                     <span className="absolute inset-y-0 right-0 w-1/2 bg-acento" />
                     <Palette className="relative size-4" />
                 </span>
-                <span className="hidden sm:inline">Apariencia</span>
+                
                 <span className="flex items-center gap-0.5 text-suave group-hover:text-current" aria-hidden>
                     {t.modoReal === 'oscuro' ? <Moon className="size-3.5" /> : <Sun className="size-3.5" />}
-                    <span className="text-[0.7rem] font-semibold">Aa</span>
+                
                 </span>
             </button>
             {abierto && (
