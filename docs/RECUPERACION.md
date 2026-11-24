@@ -3,6 +3,33 @@
 > Objetivo: si durante la defensa alguien borra, duplica o modifica algo en el servidor,
 > **diagnosticar en 10 segundos y restaurar en menos de 1 minuto.**
 
+## ⭐ Servidor tecnoweb.org.bo (sin SSH) — usar ESTO
+
+En tecnoweb no hay acceso SSH: los archivos se manejan por **FTP** y la base de datos se controla
+**desde la laptop** (`php artisan … --env=servidor`, que usa `.env.servidor`). Todo con un solo script,
+desde la carpeta del proyecto en Git Bash:
+
+| Síntoma / sabotaje | Comando | Tiempo aprox. |
+|---|---|---|
+| Diagnóstico (siempre primero) | `bash scripts/servidor.sh verificar` | 10 s |
+| Borraron o modificaron **archivos** (index.php, .htaccess, build/, .env, controladores…) | `bash scripts/servidor.sh archivos` | 1–3 min |
+| Borraron un **trigger/función**, cambiaron **permisos/menú**, tocaron al **admin** | `bash scripts/servidor.sh reparar` | 15 s |
+| Borraron, **duplicaron** o modificaron **registros** | `bash scripts/servidor.sh datos` | 30 s |
+| Hicieron `DROP TABLE` | `bash scripts/servidor.sh tablas` | 2 min |
+| No sé qué pasó | `bash scripts/servidor.sh todo` | 3–5 min |
+
+Antes de la defensa: `bash scripts/servidor.sh respaldar antes_defensa` (el respaldo queda **en la laptop**,
+en `storage/app/respaldos/servidor/`, a salvo de lo que pase en el servidor). Para volver a él:
+`bash scripts/servidor.sh datos antes_defensa.json`.
+
+Estructura en el servidor: `/home/grupo08sa/proyecto2/` (público: index.php, .htaccess, build/) y
+`/home/grupo08sa/proyecto2/_app/` (código + .env, bloqueado por `.htaccess`). Cada `subir` guarda la versión
+anterior como `proyecto2_respaldo_<fecha>`: si todo falla, renombrarla por FTP a `proyecto2` la vuelve a publicar.
+
+---
+
+## Servidor con SSH (alternativa genérica)
+
 ## 0. Antes de la defensa (checklist)
 
 - [ ] `bash ~/proyecto2_app/deploy/respaldar.sh antes_defensa` → crea `antes_defensa.json` + copia `.env`, scripts y paquete en `~/respaldos_proyecto2/`
