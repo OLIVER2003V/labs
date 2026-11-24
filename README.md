@@ -38,7 +38,7 @@ cp .env.example .env         # configurar DB_* (pgsql) y APP_LOCALE=es
 php artisan key:generate
 php artisan migrate --seed   # estructura + triggers + datos de demostración
 npm run build                # o "npm run dev" mientras se programa
-php artisan serve --no-reload   # http://127.0.0.1:8000  (--no-reload evita el error de curl en Windows)
+php artisan serve            # http://127.0.0.1:8000  (en otra terminal: npm run dev)
 ```
 
 **Datos**: si la base tiene el esquema `sislab` (proyecto 1), `php artisan migrate:fresh --seed` importa sus datos

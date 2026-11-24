@@ -6,6 +6,7 @@ use App\Services\Pagos\PagoFacilQr;
 use App\Services\Pagos\PasarelaQr;
 use App\Services\Pagos\SimuladaQr;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Foundation\Console\ServeCommand;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
@@ -29,5 +30,9 @@ class AppServiceProvider extends ServiceProvider
             ->by('login|'.strtolower((string) $r->input('email')).'|'.$r->ip()));
 
         RateLimiter::for('visitas', fn (Request $r) => Limit::perMinute(120)->by('visitas|'.$r->ip()));
+
+        // "php artisan serve" en PowerShell (Windows): Laravel solo pasa al servidor la variable "SYSTEMROOT"
+        // en mayúsculas, pero PowerShell la llama "SystemRoot". Sin ella PHP no inicia curl.
+        ServeCommand::$passthroughVariables[] = 'SystemRoot';
     }
 }
