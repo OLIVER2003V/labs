@@ -29,6 +29,9 @@ Detalle de cada requisito y dónde está en el código: [docs/MAPA_DEFENSA.md](d
 
 ## Ejecutar en local
 
+Forma rápida (Git Bash): `bash scripts/local.sh` → http://127.0.0.1:8000
+(`--reiniciar` recarga los datos de demostración, `--pruebas` ejecuta las pruebas).
+
 Requisitos: PHP 8.2+ con `pdo_pgsql`, Composer, Node 20+, PostgreSQL.
 
 ```bash
@@ -45,6 +48,17 @@ Usuarios de demostración (contraseña **Ficct2026**): `admin@ficct.edu.bo`, `en
 `docente@ficct.edu.bo`, `auxiliar@ficct.edu.bo`, `director@ficct.edu.bo`.
 
 Pasarela simulada: tarjeta `4111 1111 1111 1111` (aprobada) · `4000 0000 0000 0002` (rechazada).
+
+## Pruebas automáticas
+
+21 pruebas (PHPUnit) sobre una base PostgreSQL de prueba `db_grupo08sa_test` (créela una vez con `CREATE DATABASE db_grupo08sa_test;`):
+
+```bash
+php artisan test
+```
+
+- `tests/Feature/SeguridadTest.php`: login, bitácora, matriz de acceso, menú por rol, protección del rol Administrador, validación en español, contador de visitas.
+- `tests/Feature/NegocioTest.php`: choques de horario, flujo de reservas, triggers (reservas, incidencias, auditoría), pagos y respaldo/restauración.
 
 ## Servidor y recuperación
 

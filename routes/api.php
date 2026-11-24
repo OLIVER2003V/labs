@@ -63,6 +63,7 @@ Route::middleware(['auth:sanctum', 'bitacora'])->group(function () {
 
     // Administración
     crud('usuarios', UsuarioController::class, 'usuarios');
+    Route::put('usuarios/{id}/restaurar', [UsuarioController::class, 'restaurar'])->whereNumber('id')->middleware('permiso:usuarios.eliminar');
     Route::get('roles', [RolController::class, 'matriz'])->middleware('permiso:roles.ver');
     Route::post('roles', [RolController::class, 'store'])->middleware('permiso:roles.editar');
     Route::put('roles/{id}', [RolController::class, 'update'])->middleware('permiso:roles.editar');

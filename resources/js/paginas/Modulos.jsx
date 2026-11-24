@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { HandHelping, Lock, PlayCircle } from 'lucide-react';
+import { HandHelping, Lock, PlayCircle, RotateCcw } from 'lucide-react';
 import CrudPage from '../componentes/CrudPage';
 import { Badge, Formulario, Modal, useToast } from '../componentes/ui';
 import api, { erroresCampos, mensajeError } from '../lib/api';
@@ -322,6 +322,27 @@ export const Turnos = () => (
 );
 
 // ----------------------------------------------------------------- Usuarios
+function BotonRestaurarUsuario({ fila, recargar }) {
+    const { puede } = useAuth();
+    const notificar = useToast();
+    if (!fila.deleted_at || !puede('usuarios.eliminar')) return null;
+    return (
+        <button
+            className="btn btn-fantasma btn-sm text-exito"
+            onClick={async () => {
+                try {
+                    notificar((await api.put(`/usuarios/${fila.id}/restaurar`)).data.message);
+                    recargar();
+                } catch (e) {
+                    notificar(mensajeError(e), 'error');
+                }
+            }}
+        >
+            <RotateCcw className="size-4" aria-hidden /> Restaurar
+        </button>
+    );
+}
+
 export const Usuarios = () => (
     <CrudPage
         titulo="Usuarios"
@@ -330,14 +351,18 @@ export const Usuarios = () => (
         singular="usuario"
         permisos={permisosDe('usuarios')}
         inicial={{ estado: 'ACTIVO' }}
-        filtros={[{ name: 'estado', label: 'Estado', opciones: ['ACTIVO', 'INACTIVO'] }]}
+        filtros={[
+            { name: 'estado', label: 'Estado', opciones: ['ACTIVO', 'INACTIVO'] },
+            { name: 'eliminados', label: 'Registros', textoTodos: 'Usuarios vigentes', opciones: [{ value: 1, label: 'Usuarios eliminados' }] },
+        ]}
+        acciones={(fila, recargar) => <BotonRestaurarUsuario fila={fila} recargar={recargar} />}
         columnas={[
             { key: 'codigo', label: 'Código' },
             { key: 'nombre', label: 'Nombre', render: (f) => <><strong>{f.nombre_completo}</strong><span className="block text-xs text-suave">{f.email}</span></> },
             { key: 'telefono', label: 'Teléfono' },
             { key: 'rol', label: 'Rol', render: (f) => f.rol?.nombre },
             { key: 'ultimo_acceso', label: 'Último acceso', render: (f) => fechaHora(f.ultimo_acceso) },
-            { key: 'estado', label: 'Estado', render: (f) => <Badge valor={f.estado} /> },
+            { key: 'estado', label: 'Estado', render: (f) => (f.deleted_at ? <Badge valor="BAJA">Eliminado</Badge> : <Badge valor={f.estado} />) },
         ]}
         aFormulario={(f) => ({ codigo: f.codigo, nombre: f.nombre, apellido: f.apellido, email: f.email, telefono: f.telefono ?? '', rol_id: f.rol_id, estado: f.estado, password: '' })}
         campos={[

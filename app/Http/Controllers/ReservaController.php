@@ -78,6 +78,7 @@ class ReservaController extends CrudController
     {
         $reserva = Reserva::findOrFail($id);
         abort_if($reserva->estado !== 'PENDIENTE', 422, "La reserva ya fue resuelta (estado {$reserva->estado}).");
+        abort_if($reserva->fecha->format('Y-m-d') < now()->format('Y-m-d'), 422, 'No se puede aprobar una reserva de una fecha que ya pasó. Recházela.');
 
         $conflictos = Disponibilidad::conflictos($reserva->laboratorio_id, $reserva->fecha->format('Y-m-d'),
             $reserva->hora_inicio, $reserva->hora_fin, $reserva->id);

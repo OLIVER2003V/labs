@@ -37,7 +37,7 @@ class AsistenciaController extends Controller
           ->when($request->filled('hasta'), fn ($x) => $x->whereDate('fecha', '<=', $request->hasta))
           ->when($request->filled('estado'), fn ($x) => $x->where('estado', $request->estado));
 
-        return response()->json($q->paginate(min((int) $request->query('per_page', 10), 100)));
+        return response()->json($q->paginate($this->porPagina($request, 10)));
     }
 
     /** Turno del auxiliar para hoy en el que cae la hora actual (con anticipación) */

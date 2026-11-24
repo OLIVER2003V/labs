@@ -30,7 +30,7 @@ class BitacoraController extends Controller
                 ->orWhere('recurso', 'ILIKE', "%$texto%")->orWhere('ruta', 'ILIKE', "%$texto%"));
         }
 
-        return response()->json($q->paginate(min((int) $request->query('per_page', 15), 100)));
+        return response()->json($q->paginate($this->porPagina($request, 15)));
     }
 
     /** Resumen: top IPs, top recursos y logins fallidos recientes */
@@ -60,7 +60,7 @@ class BitacoraController extends Controller
             ->when($request->filled('tabla'), fn ($x) => $x->where('tabla', $request->tabla))
             ->when($request->filled('operacion'), fn ($x) => $x->where('operacion', $request->operacion));
 
-        $pagina = $q->paginate(min((int) $request->query('per_page', 15), 100));
+        $pagina = $q->paginate($this->porPagina($request, 15));
         $pagina->getCollection()->transform(function ($fila) {
             $fila->datos_antes = json_decode($fila->datos_antes ?? 'null');
             $fila->datos_despues = json_decode($fila->datos_despues ?? 'null');

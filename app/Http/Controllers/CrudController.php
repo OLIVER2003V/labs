@@ -81,7 +81,7 @@ abstract class CrudController extends Controller
             }
         }
 
-        $porPagina = min(max((int) $request->query('per_page', 10), 1), 100);
+        $porPagina = $this->porPagina($request);
 
         return response()->json(
             $query->orderBy('id', 'desc')->paginate($porPagina)

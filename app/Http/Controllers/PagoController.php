@@ -109,7 +109,7 @@ class PagoController extends Controller
                 ->orWhereHas('usuario', fn ($u) => $u->where('nombre', 'ILIKE', "%$texto%")->orWhere('apellido', 'ILIKE', "%$texto%")));
         }
 
-        return response()->json($q->paginate(min((int) $request->query('per_page', 10), 100)));
+        return response()->json($q->paginate($this->porPagina($request, 10)));
     }
 
     public function crearPlan(Request $request): JsonResponse
@@ -209,7 +209,7 @@ class PagoController extends Controller
             $q->where(fn ($x) => $x->where('codigo', 'ILIKE', "%$texto%")->orWhere('descripcion', 'ILIKE', "%$texto%"));
         }
 
-        return response()->json($q->paginate(min((int) $request->query('per_page', 10), 100)));
+        return response()->json($q->paginate($this->porPagina($request, 10)));
     }
 
     private function procesar(User $usuario, MetodoPago $metodo, float $monto, string $descripcion, array $extra): Transaccion

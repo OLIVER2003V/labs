@@ -13,6 +13,7 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 /**
  * Funciones transversales: búsqueda global, contador de visitas y listas para los formularios.
@@ -70,7 +71,9 @@ class GeneralController extends Controller
      */
     public function visita(Request $request): JsonResponse
     {
-        $d = $request->validate(['ruta' => ['required', 'string', 'max:150', 'regex:/^\/[A-Za-z0-9\/_-]*$/']]);
+        // Solo se cuentan páginas reales del sistema (las del menú + login/perfil), para que no se llene la tabla de basura
+        $rutas = cache()->remember('rutas_validas', 300, fn () => DB::table('menus')->pluck('ruta')->merge(['/', '/login', '/perfil'])->unique()->all());
+        $d = $request->validate(['ruta' => ['required', 'string', 'max:150', Rule::in($rutas)]], ['ruta.in' => 'Página no registrada.']);
         $total = DB::selectOne('SELECT registrar_visita(?) AS total', [$d['ruta']])->total;
 
         return response()->json(['ruta' => $d['ruta'], 'visitas' => (int) $total]);
@@ -79,6 +82,18 @@ class GeneralController extends Controller
     /** Listas cortas (id + etiqueta) para los <select> de los formularios */
     public function opciones(Request $request, string $tipo): JsonResponse
     {
+        // Algunas listas exponen datos personales: solo para quien las necesita en sus formularios
+        $requiere = [
+            'usuarios' => ['planes.gestionar', 'usuarios.ver'],
+            'roles' => ['usuarios.ver'],
+            'auxiliares' => ['turnos.crear', 'asistencia.gestionar'],
+            'docentes' => ['horarios.ver'],
+            'turnos' => ['asistencia.gestionar'],
+        ];
+        if (isset($requiere[$tipo]) && ! collect($requiere[$tipo])->contains(fn ($p) => $request->user()->tienePermiso($p))) {
+            abort(403, 'No tiene permiso para consultar esta lista.');
+        }
+
         $lista = match ($tipo) {
             'laboratorios' => Laboratorio::orderBy('codigo')->get()->map(fn ($l) => ['id' => $l->id, 'label' => "{$l->codigo} - {$l->nombre}", 'estado' => $l->estado]),
             'materias' => Materia::orderBy('sigla')->get()->map(fn ($m) => ['id' => $m->id, 'label' => "{$m->sigla} - {$m->nombre}"]),

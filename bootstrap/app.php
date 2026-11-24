@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\CabecerasSeguridad;
 use App\Http\Middleware\RegistrarBitacora;
 use App\Http\Middleware\VerificarPermiso;
 use Illuminate\Auth\AuthenticationException;
@@ -21,6 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->trustProxies(at: '*');
+        $middleware->append(CabecerasSeguridad::class);
         $middleware->alias([
             'permiso' => VerificarPermiso::class,
             'bitacora' => RegistrarBitacora::class,

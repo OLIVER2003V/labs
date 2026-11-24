@@ -176,7 +176,7 @@ export default function Disponibilidad() {
                                     </p>
                                 ))}
                                 {libre && puede('reservas.crear') && (
-                                    <Link to="/reservas" className="btn btn-secundario btn-sm mt-3">Solicitar reserva</Link>
+                                    <Link to={`/reservas?${new URLSearchParams({ nueva: 1, laboratorio_id: l.id, fecha: v.fecha, hora_inicio: v.hora_inicio, hora_fin: v.hora_fin })}`} className="btn btn-secundario btn-sm mt-3">Solicitar reserva</Link>
                                 )}
                             </article>
                         ))}

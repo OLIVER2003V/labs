@@ -22,21 +22,6 @@ use Illuminate\Support\Facades\Schema;
 |  php artisan respaldo:restaurar --reconstruir  → si borraron tablas: recrea el esquema y carga el respaldo
 */
 
-/** Evita borrar tablas de OTROS proyectos si se usa el esquema public compartido */
-function esquemaSeguroParaReconstruir(): ?string
-{
-    $esquema = DB::selectOne('SELECT current_schema() AS s')->s;
-    $ajenas = collect(DB::select('SELECT tablename FROM pg_tables WHERE schemaname = current_schema()'))
-        ->pluck('tablename')
-        ->diff(array_merge(Respaldo::TABLAS, ['migrations']))
-        ->values();
-
-    return $ajenas->isNotEmpty()
-        ? "El esquema \"$esquema\" tiene tablas de otro proyecto (".$ajenas->take(5)->implode(', ').'). '
-          .'migrate:fresh las borraría. Use un esquema propio (DB_SCHEMA=proyecto2).'
-        : null;
-}
-
 Artisan::command('sistema:verificar', function () {
     $fallas = 0;
     $ok = function (bool $cond, string $que, string $solucion = '') use (&$fallas) {
@@ -197,7 +182,7 @@ Artisan::command('respaldo:restaurar {archivo=ultimo.json} {--reconstruir : Recr
     }
 
     if ($this->option('reconstruir')) {
-        if ($motivo = esquemaSeguroParaReconstruir()) {
+        if ($motivo = Respaldo::motivoParaNoReconstruir()) {
             $this->error($motivo);
 
             return 1;

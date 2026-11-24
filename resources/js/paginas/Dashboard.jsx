@@ -45,11 +45,9 @@ export default function Dashboard() {
     const [d, setD] = useState(null);
 
     useEffect(() => {
+        if (rango.desde && rango.hasta && rango.desde > rango.hasta) return; // rango inválido: no consultar
         api.get('/dashboard', { params: { desde: rango.desde || undefined, hasta: rango.hasta || undefined } })
-            .then((r) => {
-                setD(r.data);
-                setRango((x) => (x.desde ? x : r.data.rango));
-            })
+            .then((r) => setD(r.data))
             .catch((e) => notificar(mensajeError(e), 'error'));
     }, [rango.desde, rango.hasta, notificar]);
 
@@ -64,10 +62,10 @@ export default function Dashboard() {
         <>
             <Encabezado titulo="Panel de estadísticas" descripcion={`Actividad del ${fecha(d.rango.desde)} al ${fecha(d.rango.hasta)}`}>
                 <label className="flex items-center gap-2 text-sm">Desde
-                    <input type="date" className="campo w-auto py-1.5" value={rango.desde} max={rango.hasta} onChange={(e) => setRango({ ...rango, desde: e.target.value })} />
+                    <input type="date" className="campo w-auto py-1.5" value={rango.desde || d.rango.desde} max={rango.hasta || d.rango.hasta} onChange={(e) => setRango({ hasta: rango.hasta || d.rango.hasta, desde: e.target.value })} />
                 </label>
                 <label className="flex items-center gap-2 text-sm">Hasta
-                    <input type="date" className="campo w-auto py-1.5" value={rango.hasta} min={rango.desde} onChange={(e) => setRango({ ...rango, hasta: e.target.value })} />
+                    <input type="date" className="campo w-auto py-1.5" value={rango.hasta || d.rango.hasta} min={rango.desde || d.rango.desde} onChange={(e) => setRango({ desde: rango.desde || d.rango.desde, hasta: e.target.value })} />
                 </label>
             </Encabezado>
 

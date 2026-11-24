@@ -21,9 +21,9 @@ export default function Footer() {
         <footer className="border-t border-borde px-4 py-4 text-sm text-suave sm:px-6">
             <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2">
                 <p>© {new Date().getFullYear()} Laboratorios FICCT · UAGRM — Tecnología Web INF513 · Grupo 08 SA</p>
-                <p className="flex items-center gap-1.5" aria-live="polite">
+                <p className={`flex items-center gap-1.5 ${visitas === null ? 'invisible' : ''}`} aria-live="polite">
                     <Eye className="size-4" aria-hidden />
-                    {visitas === null ? 'Contando visitas…' : (
+                    {visitas === null ? null : (
                         <>Esta página fue visitada <strong className="text-texto">{visitas.toLocaleString('es-BO')}</strong> {visitas === 1 ? 'vez' : 'veces'}</>
                     )}
                 </p>

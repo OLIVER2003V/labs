@@ -7,7 +7,7 @@ import { Icono } from '../componentes/Layout';
 export default function Inicio() {
     const { usuario, menu } = useAuth();
     const h = new Date().getHours();
-    const saludo = h < 12 ? 'Buenos días' : h < 19 ? 'Buenas tardes' : 'Buenas noches';
+    const saludo = h >= 5 && h < 12 ? 'Buenos días' : h >= 12 && h < 19 ? 'Buenas tardes' : 'Buenas noches';
     const accesos = menu.filter((m) => m.ruta !== '/');
 
     return (

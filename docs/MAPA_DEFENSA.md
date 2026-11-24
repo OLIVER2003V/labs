@@ -73,6 +73,18 @@ Flujo: React → `lib/api.js` (Axios + token Bearer) → `routes/api.php` → mi
 
 ---
 
+## Seguridad adicional (para preguntas)
+- **Escalada de privilegios bloqueada**: solo quien tiene `roles.editar` (Administrador) puede crear, editar o borrar cuentas de Administrador (`UsuarioController::protegerSistema`).
+- **Listas con datos personales** (`/api/opciones/usuarios`, etc.) exigen permiso (`GeneralController::opciones`).
+- **Cabeceras HTTP**: `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy` (`app/Http/Middleware/CabecerasSeguridad.php`).
+- **Fuerza bruta**: máximo 5 intentos de login por minuto por correo + IP (`AppServiceProvider`).
+- **Borrado lógico de usuarios**: se pueden ver y restaurar en *Usuarios → Registros: Usuarios eliminados*.
+
+## Extras útiles en la demo
+- **Exportar** (botón en cada tabla): descarga un CSV para Excel con *todos* los registros del filtro actual.
+- **Disponibilidad → Solicitar reserva**: abre el formulario ya completado con el laboratorio, la fecha y el horario.
+- **Pruebas automáticas**: `php artisan test` (21 pruebas en verde) demuestra seguridad, triggers y reglas de negocio.
+
 ## Reglas de negocio del dominio (para preguntas)
 - **Choque**: dos franjas chocan si `inicioA < finB` y `inicioB < finA` (`app/Services/Disponibilidad.php`).
 - Disponibilidad = horario base del semestre activo + reservas APROBADAS + fechas bloqueadas + estado del laboratorio.

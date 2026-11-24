@@ -9,6 +9,7 @@ import api from '../lib/api';
 import { useAuth } from '../contexto/AuthContext';
 import PanelAccesibilidad from './PanelAccesibilidad';
 import Footer from './Footer';
+import ErrorBoundary from './ErrorBoundary';
 
 // Íconos disponibles para el menú (el nombre se guarda en la columna menus.icono)
 const ICONOS = {
@@ -213,7 +214,9 @@ export default function Layout() {
             </header>
 
             <main id="contenido" tabIndex={-1} className="mx-auto max-w-7xl p-4 outline-none sm:p-6">
-                <Outlet />
+                <ErrorBoundary ruta={ubicacion.pathname}>
+                    <Outlet />
+                </ErrorBoundary>
             </main>
             <Footer />
         </div>

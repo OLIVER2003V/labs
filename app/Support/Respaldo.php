@@ -92,4 +92,19 @@ class Respaldo
 
         return $total;
     }
+
+    /** Evita borrar tablas de OTROS proyectos (migrate:fresh) si el esquema es compartido. null = es seguro */
+    public static function motivoParaNoReconstruir(): ?string
+    {
+        $esquema = DB::selectOne('SELECT current_schema() AS s')->s;
+        $ajenas = collect(DB::select('SELECT tablename FROM pg_tables WHERE schemaname = current_schema()'))
+            ->pluck('tablename')
+            ->diff(array_merge(self::TABLAS, ['migrations']))
+            ->values();
+
+        return $ajenas->isNotEmpty()
+            ? "El esquema \"$esquema\" tiene tablas de otro proyecto (".$ajenas->take(5)->implode(', ').'). '
+              .'migrate:fresh las borraría. Use un esquema propio (DB_SCHEMA=proyecto2).'
+            : null;
+    }
 }

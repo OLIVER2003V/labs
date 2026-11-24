@@ -43,7 +43,15 @@ export function Modal({ abierto, titulo, onCerrar, children, ancho = 'max-w-lg' 
     const ref = useRef(null);
     useEffect(() => {
         if (!abierto) return;
-        const esc = (e) => e.key === 'Escape' && onCerrar();
+        const esc = (e) => {
+            if (e.key === 'Escape') onCerrar();
+            if (e.key === 'Tab' && ref.current) {
+                const f = [...ref.current.querySelectorAll('button,input,select,textarea,a[href]')].filter((x) => !x.disabled);
+                if (!f.length) return;
+                if (e.shiftKey && document.activeElement === f[0]) { e.preventDefault(); f.at(-1).focus(); }
+                else if (!e.shiftKey && document.activeElement === f.at(-1)) { e.preventDefault(); f[0].focus(); }
+            }
+        };
         document.addEventListener('keydown', esc);
         ref.current?.querySelector('input,select,textarea,button')?.focus();
         return () => document.removeEventListener('keydown', esc);

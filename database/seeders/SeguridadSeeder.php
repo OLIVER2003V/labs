@@ -46,7 +46,7 @@ class SeguridadSeeder extends Seeder
             'laboratorios.*', 'semestres.*', 'horarios.*', 'disponibilidad.ver', 'reservas.*', 'equipos.*',
             'incidencias.*', 'objetos.*', 'turnos.*', 'asistencia.ver', 'asistencia.gestionar',
             'pagos.*', 'planes.gestionar', 'conceptos.*'],
-        'DOC' => ['dashboard.ver', 'laboratorios.ver', 'horarios.ver', 'disponibilidad.ver', 'reservas.ver', 'reservas.crear',
+        'DOC' => ['laboratorios.ver', 'horarios.ver', 'disponibilidad.ver', 'reservas.ver', 'reservas.crear',
             'reservas.cancelar', 'equipos.ver', 'incidencias.ver', 'incidencias.crear', 'pagos.ver', 'pagos.pagar'],
         'AUX' => ['laboratorios.ver', 'horarios.ver', 'disponibilidad.ver', 'reservas.ver', 'reservas.crear', 'reservas.cancelar',
             'equipos.ver', 'incidencias.ver', 'incidencias.crear', 'objetos.*', 'turnos.ver', 'asistencia.ver',
