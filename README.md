@@ -29,7 +29,8 @@ Detalle de cada requisito y dónde está en el código: [docs/MAPA_DEFENSA.md](d
 
 ## Ejecutar en local
 
-Forma rápida (Git Bash): `bash scripts/local.sh` → http://127.0.0.1:8000
+Forma rápida: en **PowerShell** `.\iniciar.ps1` · en **Git Bash** `bash scripts/local.sh` → http://127.0.0.1:8000
+(En PowerShell no use `php artisan serve`: en Windows falla con *Unable to start curl module*.)
 (`--reiniciar` recarga los datos de demostración, `--pruebas` ejecuta las pruebas).
 
 Requisitos: PHP 8.2+ con `pdo_pgsql`, Composer, Node 20+, PostgreSQL.
