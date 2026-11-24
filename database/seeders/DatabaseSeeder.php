@@ -2,24 +2,19 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
 class DatabaseSeeder extends Seeder
 {
-    use WithoutModelEvents;
-
     /**
-     * Seed the application's database.
+     * php artisan migrate:fresh --seed   → reconstruye toda la base con datos de demostración.
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        $this->call([SeguridadSeeder::class, DatosSeeder::class]);
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
+        // Los triggers registraron todo el sembrado como "cambios"; empezamos la auditoría limpia.
+        DB::table('auditoria')->truncate();
     }
 }

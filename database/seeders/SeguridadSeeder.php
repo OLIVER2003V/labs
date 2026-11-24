@@ -1,0 +1,117 @@
+<?php
+
+namespace Database\Seeders;
+
+use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
+
+/**
+ * Roles, permisos (matriz de acceso) y menú dinámico.
+ */
+class SeguridadSeeder extends Seeder
+{
+    /** recurso => [accion => descripción] */
+    const PERMISOS = [
+        'dashboard' => ['ver' => 'Ver el panel de estadísticas'],
+        'usuarios' => ['ver' => 'Listar usuarios', 'crear' => 'Registrar usuarios', 'editar' => 'Modificar usuarios', 'eliminar' => 'Eliminar usuarios'],
+        'roles' => ['ver' => 'Ver roles y matriz de acceso', 'editar' => 'Crear/editar roles y asignar permisos'],
+        'bitacora' => ['ver' => 'Ver bitácora de accesos'],
+        'auditoria' => ['ver' => 'Ver auditoría de cambios (triggers)', 'restaurar' => 'Restaurar registros eliminados'],
+        'laboratorios' => ['ver' => 'Listar laboratorios', 'crear' => 'Registrar laboratorios', 'editar' => 'Modificar laboratorios', 'eliminar' => 'Eliminar laboratorios'],
+        'semestres' => ['ver' => 'Ver semestres y fechas bloqueadas', 'crear' => 'Registrar semestres y fechas bloqueadas', 'editar' => 'Modificar/activar/cerrar semestres', 'eliminar' => 'Eliminar semestres y fechas bloqueadas'],
+        'horarios' => ['ver' => 'Ver horario base y materias', 'crear' => 'Registrar clases y materias', 'editar' => 'Modificar clases y materias', 'eliminar' => 'Eliminar clases y materias'],
+        'disponibilidad' => ['ver' => 'Consultar disponibilidad de laboratorios'],
+        'reservas' => ['ver' => 'Ver sus reservas', 'ver_todas' => 'Ver reservas de todos', 'crear' => 'Solicitar reservas', 'aprobar' => 'Aprobar o rechazar reservas', 'cancelar' => 'Cancelar reservas'],
+        'equipos' => ['ver' => 'Ver inventario', 'crear' => 'Registrar equipos', 'editar' => 'Modificar equipos', 'eliminar' => 'Eliminar equipos'],
+        'incidencias' => ['ver' => 'Ver incidencias', 'crear' => 'Reportar incidencias', 'gestionar' => 'Atender y resolver incidencias'],
+        'objetos' => ['ver' => 'Ver objetos encontrados', 'crear' => 'Registrar objetos encontrados', 'entregar' => 'Registrar entrega de objetos'],
+        'turnos' => ['ver' => 'Ver turnos', 'crear' => 'Asignar y modificar turnos'],
+        'asistencia' => ['ver' => 'Ver asistencia', 'marcar' => 'Marcar entrada y salida', 'gestionar' => 'Registrar permisos y faltas, ver toda la asistencia'],
+        'pagos' => ['ver' => 'Ver sus pagos, planes y métodos', 'pagar' => 'Registrar métodos y realizar pagos', 'ver_todos' => 'Ver transacciones de todos'],
+        'planes' => ['gestionar' => 'Crear y anular planes de pago'],
+        'conceptos' => ['crear' => 'Registrar conceptos de cobro', 'editar' => 'Modificar conceptos de cobro', 'eliminar' => 'Eliminar conceptos de cobro'],
+    ];
+
+    const ROLES = [
+        ['ADM', 'Administrador del Sistema', 'Administra usuarios, roles, permisos y la seguridad del sistema', true],
+        ['ENC', 'Encargado de Laboratorios', 'Gestiona laboratorios, horarios, reservas, inventario, auxiliares y cobros', false],
+        ['DOC', 'Docente', 'Solicita reservas, consulta disponibilidad y reporta incidencias', false],
+        ['AUX', 'Auxiliar', 'Atiende los laboratorios en su turno, registra asistencia, incidencias y objetos', false],
+        ['DIR', 'Director de Carrera', 'Solicita reservas para eventos y consulta estadísticas', false],
+    ];
+
+    /** Permisos por rol de negocio (el ADM recibe todos) */
+    const ROL_PERMISOS = [
+        'ENC' => ['dashboard.ver', 'usuarios.ver', 'usuarios.crear', 'usuarios.editar', 'bitacora.ver',
+            'laboratorios.*', 'semestres.*', 'horarios.*', 'disponibilidad.ver', 'reservas.*', 'equipos.*',
+            'incidencias.*', 'objetos.*', 'turnos.*', 'asistencia.ver', 'asistencia.gestionar',
+            'pagos.*', 'planes.gestionar', 'conceptos.*'],
+        'DOC' => ['dashboard.ver', 'laboratorios.ver', 'horarios.ver', 'disponibilidad.ver', 'reservas.ver', 'reservas.crear',
+            'reservas.cancelar', 'equipos.ver', 'incidencias.ver', 'incidencias.crear', 'pagos.ver', 'pagos.pagar'],
+        'AUX' => ['laboratorios.ver', 'horarios.ver', 'disponibilidad.ver', 'reservas.ver', 'reservas.crear', 'reservas.cancelar',
+            'equipos.ver', 'incidencias.ver', 'incidencias.crear', 'objetos.*', 'turnos.ver', 'asistencia.ver',
+            'asistencia.marcar', 'pagos.ver', 'pagos.pagar'],
+        'DIR' => ['dashboard.ver', 'laboratorios.ver', 'horarios.ver', 'disponibilidad.ver', 'reservas.ver', 'reservas.ver_todas',
+            'reservas.crear', 'reservas.cancelar', 'equipos.ver', 'incidencias.ver', 'pagos.ver', 'pagos.pagar', 'pagos.ver_todos'],
+    ];
+
+    /** grupo, título, ruta React, ícono (lucide), permiso requerido */
+    const MENU = [
+        ['General', 'Inicio', '/', 'Home', null],
+        ['General', 'Panel de estadísticas', '/dashboard', 'BarChart3', 'dashboard.ver'],
+        ['Horarios y reservas', 'Disponibilidad', '/disponibilidad', 'CalendarSearch', 'disponibilidad.ver'],
+        ['Horarios y reservas', 'Reservas', '/reservas', 'CalendarCheck', 'reservas.ver'],
+        ['Horarios y reservas', 'Horario base', '/horarios', 'CalendarDays', 'horarios.ver'],
+        ['Horarios y reservas', 'Materias', '/materias', 'BookOpen', 'horarios.crear'],
+        ['Operación', 'Inventario', '/equipos', 'Monitor', 'equipos.ver'],
+        ['Operación', 'Incidencias', '/incidencias', 'Wrench', 'incidencias.ver'],
+        ['Operación', 'Objetos encontrados', '/objetos', 'PackageSearch', 'objetos.ver'],
+        ['Operación', 'Turnos', '/turnos', 'Clock', 'turnos.ver'],
+        ['Operación', 'Asistencia', '/asistencia', 'UserCheck', 'asistencia.ver'],
+        ['Pagos', 'Mis pagos', '/pagos', 'Wallet', 'pagos.ver'],
+        ['Pagos', 'Métodos de pago', '/pagos/metodos', 'CreditCard', 'pagos.pagar'],
+        ['Pagos', 'Planes de pago', '/pagos/planes', 'ListChecks', 'planes.gestionar'],
+        ['Pagos', 'Conceptos de cobro', '/pagos/conceptos', 'Tags', 'conceptos.crear'],
+        ['Configuración', 'Laboratorios', '/laboratorios', 'Building2', 'laboratorios.ver'],
+        ['Configuración', 'Semestres', '/semestres', 'CalendarRange', 'semestres.ver'],
+        ['Configuración', 'Fechas bloqueadas', '/fechas-bloqueadas', 'CalendarX', 'semestres.ver'],
+        ['Seguridad', 'Usuarios', '/usuarios', 'Users', 'usuarios.ver'],
+        ['Seguridad', 'Roles y permisos', '/roles', 'ShieldCheck', 'roles.ver'],
+        ['Seguridad', 'Bitácora', '/bitacora', 'ScrollText', 'bitacora.ver'],
+        ['Seguridad', 'Auditoría', '/auditoria', 'History', 'auditoria.ver'],
+    ];
+
+    public function run(): void
+    {
+        foreach (self::PERMISOS as $recurso => $acciones) {
+            foreach ($acciones as $accion => $desc) {
+                DB::table('permisos')->insert(['codigo' => "$recurso.$accion", 'recurso' => $recurso, 'accion' => $accion, 'descripcion' => $desc]);
+            }
+        }
+
+        foreach (self::ROLES as [$codigo, $nombre, $desc, $sistema]) {
+            DB::table('roles')->insert(['codigo' => $codigo, 'nombre' => $nombre, 'descripcion' => $desc,
+                'es_sistema' => $sistema, 'created_at' => now(), 'updated_at' => now()]);
+        }
+
+        $permisos = DB::table('permisos')->pluck('id', 'codigo');
+        $roles = DB::table('roles')->pluck('id', 'codigo');
+
+        foreach ($permisos as $id) {
+            DB::table('rol_permiso')->insert(['rol_id' => $roles['ADM'], 'permiso_id' => $id]);
+        }
+        foreach (self::ROL_PERMISOS as $rol => $lista) {
+            foreach ($permisos as $codigo => $id) {
+                $recurso = explode('.', $codigo)[0];
+                if (in_array($codigo, $lista, true) || in_array("$recurso.*", $lista, true)) {
+                    DB::table('rol_permiso')->insert(['rol_id' => $roles[$rol], 'permiso_id' => $id]);
+                }
+            }
+        }
+
+        foreach (self::MENU as $i => [$grupo, $titulo, $ruta, $icono, $permiso]) {
+            DB::table('menus')->insert(['grupo' => $grupo, 'titulo' => $titulo, 'ruta' => $ruta, 'icono' => $icono,
+                'permiso_codigo' => $permiso, 'orden' => ($i + 1) * 10, 'activo' => true]);
+        }
+    }
+}
