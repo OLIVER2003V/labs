@@ -12,7 +12,7 @@ set -euo pipefail
 RAIZ="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$RAIZ"
 PHP="${PHP:-php}"
-COMPOSER="${COMPOSER:-composer}"
+COMPOSER_BIN="${COMPOSER_BIN:-composer}"  # (no usar COMPOSER: composer la lee como ruta de composer.json)
 ENTREGABLE="${ENTREGABLE:-2026-2_INF513-P2_grupo08sa}"
 
 if ! git diff --quiet || ! git diff --cached --quiet; then
@@ -29,7 +29,7 @@ git archive HEAD | tar -x -C "$STAGE"
 cp -R public/build "$STAGE/public/"
 
 echo "→ Instalando dependencias de producción (composer --no-dev)…"
-(cd "$STAGE" && $COMPOSER install --no-dev --optimize-autoloader --no-interaction --no-progress -q)
+(cd "$STAGE" && $COMPOSER_BIN install --no-dev --optimize-autoloader --no-interaction --no-progress -q)
 rm -rf "$STAGE/tests" "$STAGE/node_modules"
 
 mkdir -p dist
