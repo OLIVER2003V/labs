@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Accessibility, Baby, Briefcase, Contrast, Minus, Moon, Plus, RotateCcw, Sparkles, Sun, SunMoon } from 'lucide-react';
+import { Baby, Briefcase, Contrast, Minus, Moon, Palette, Plus, RotateCcw, Sparkles, Sun, SunMoon } from 'lucide-react';
 import { useTema } from '../contexto/TemaContext';
 
 /**
@@ -39,11 +39,30 @@ export default function PanelAccesibilidad({ alineacion = 'right-0' }) {
 
     return (
         <div ref={ref} className="relative">
-            <button className="btn btn-fantasma btn-sm" onClick={() => setAbierto((v) => !v)} aria-expanded={abierto} aria-label="Apariencia y accesibilidad" title="Apariencia y accesibilidad">
-                <Accessibility className="size-5" aria-hidden />
+            <button
+                className={`group flex items-center gap-2 rounded-full border py-1.5 pr-3 pl-1.5 text-sm font-medium shadow-sm transition ${
+                    abierto ? 'border-primario bg-primario-tenue text-primario' : 'border-borde bg-superficie text-texto hover:border-primario hover:text-primario'
+                }`}
+                onClick={() => setAbierto((v) => !v)}
+                aria-expanded={abierto}
+                aria-haspopup="dialog"
+                aria-label="Apariencia y accesibilidad: tema, modo día o noche, tamaño de letra y contraste"
+                title="Apariencia y accesibilidad"
+            >
+                {/* Muestra del tema activo: se ve qué colores están aplicados */}
+                <span className="relative grid size-7 place-items-center overflow-hidden rounded-full bg-primario text-sobre-primario" aria-hidden>
+                    <span className="absolute inset-y-0 right-0 w-1/2 bg-acento" />
+                    <Palette className="relative size-4" />
+                </span>
+                <span className="hidden sm:inline">Apariencia</span>
+                <span className="flex items-center gap-0.5 text-suave group-hover:text-current" aria-hidden>
+                    {t.modoReal === 'oscuro' ? <Moon className="size-3.5" /> : <Sun className="size-3.5" />}
+                    <span className="text-[0.7rem] font-semibold">Aa</span>
+                </span>
             </button>
             {abierto && (
                 <div className={`tarjeta absolute ${alineacion} z-50 mt-2 w-80 p-4 shadow-xl`} role="dialog" aria-label="Apariencia y accesibilidad">
+                    <p className="mb-3 font-titulo text-lg font-bold tracking-wide uppercase">Apariencia y accesibilidad</p>
                     <fieldset>
                         <legend className="etiqueta">Tema</legend>
                         <div className="flex gap-2">
