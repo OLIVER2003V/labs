@@ -12,7 +12,12 @@ set -euo pipefail
 RAIZ="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$RAIZ"
 PHP="${PHP:-php}"
-COMPOSER_BIN="${COMPOSER_BIN:-composer}"  # (no usar COMPOSER: composer la lee como ruta de composer.json)
+# Composer: el del sistema o, si no hay, el de Laravel Herd (no usar la variable COMPOSER: composer la lee como ruta de composer.json)
+if [ -z "${COMPOSER_BIN:-}" ]; then
+    if command -v composer >/dev/null 2>&1; then COMPOSER_BIN=composer
+    elif [ -f "$HOME/.config/herd/bin/composer.phar" ]; then COMPOSER_BIN="$PHP $HOME/.config/herd/bin/composer.phar"
+    else echo "✘ No encontré composer. Indíquelo con COMPOSER_BIN=..." >&2; exit 1; fi
+fi
 ENTREGABLE="${ENTREGABLE:-2026-2_INF513-P2_grupo08sa}"
 
 if ! git diff --quiet || ! git diff --cached --quiet; then
