@@ -29,10 +29,6 @@ Detalle de cada requisito y dónde está en el código: [docs/MAPA_DEFENSA.md](d
 
 ## Ejecutar en local
 
-Forma rápida: en **PowerShell** `.\iniciar.ps1` · en **Git Bash** `bash scripts/local.sh` → http://127.0.0.1:8000
-(En PowerShell no use `php artisan serve`: en Windows falla con *Unable to start curl module*.)
-(`--reiniciar` recarga los datos de demostración, `--pruebas` ejecuta las pruebas).
-
 Requisitos: PHP 8.2+ con `pdo_pgsql`, Composer, Node 20+, PostgreSQL.
 
 ```bash
@@ -42,7 +38,7 @@ cp .env.example .env         # configurar DB_* (pgsql) y APP_LOCALE=es
 php artisan key:generate
 php artisan migrate --seed   # estructura + triggers + datos de demostración
 npm run build                # o "npm run dev" mientras se programa
-php artisan serve            # http://127.0.0.1:8000
+php artisan serve --no-reload   # http://127.0.0.1:8000  (--no-reload evita el error de curl en Windows)
 ```
 
 **Datos**: si la base tiene el esquema `sislab` (proyecto 1), `php artisan migrate:fresh --seed` importa sus datos
