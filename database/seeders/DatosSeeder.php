@@ -314,7 +314,8 @@ class DatosSeeder extends Seeder
         }
     }
 
-    private function pagos(): void
+    /** Catálogo de cobros (se usa también con los datos reales importados) */
+    public static function conceptosDePago(): array
     {
         $conceptos = [
             ['ALQ-LAB-HORA', 'Alquiler de laboratorio por hora (evento externo)', 150],
@@ -326,8 +327,15 @@ class DatosSeeder extends Seeder
         ];
         $c = [];
         foreach ($conceptos as [$codigo, $nombre, $monto]) {
-            $c[$codigo] = DB::table('conceptos_pago')->insertGetId(['codigo' => $codigo, 'nombre' => $nombre, 'monto' => $monto, 'activo' => true] + $this->ahora());
+            $c[$codigo] = DB::table('conceptos_pago')->insertGetId(['codigo' => $codigo, 'nombre' => $nombre, 'monto' => $monto, 'activo' => true, 'created_at' => now(), 'updated_at' => now()]);
         }
+
+        return $c;
+    }
+
+    private function pagos(): void
+    {
+        $c = self::conceptosDePago();
 
         // Tarjetas de prueba: 4111 1111 1111 1111 (aprobada), 4000 0000 0000 0002 (siempre rechazada)
         $metodos = [];

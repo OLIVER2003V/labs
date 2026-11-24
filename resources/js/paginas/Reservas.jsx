@@ -7,7 +7,7 @@ import { validar } from '../lib/validar';
 import { fecha, fechaHora, hora, hoyISO } from '../lib/formato';
 import { useAuth } from '../contexto/AuthContext';
 
-const TIPOS = ['EXAMEN', 'RECUPERACION', 'PRACTICA', 'EVENTO'];
+const TIPOS = ['EXAMEN', 'RECUPERACION', 'PRACTICA', 'EVENTO', 'DEFENSA'];
 const CAMPO_RECHAZO = [{ name: 'observacion', label: 'Motivo del rechazo', tipo: 'textarea', requerido: true, min: 5, max: 200, ancho: 'completo' }];
 
 /** Botones Aprobar / Rechazar (Encargado) y Cancelar (solicitante) */

@@ -38,6 +38,16 @@ Crear el esquema propio (para no tocar las tablas del proyecto 1 vía mail):
 psql -h db.tecnoweb.org.bo -U grupo08sa -d db_grupo08sa -c "CREATE SCHEMA IF NOT EXISTS proyecto2;"
 ```
 
+### Datos reales del proyecto 1
+
+`instalar.sh` carga los datos con `ORIGEN_DATOS=auto`: si existe el esquema `sislab` (proyecto 1 vía mail) en la
+misma base, **importa sus datos reales** (usuarios, laboratorios, materias, horario, reservas, equipos, incidencias,
+objetos encontrados, turnos, asistencia y bitácora) conservando los ID. `sislab` solo se lee, nunca se modifica.
+Los usuarios importados entran con su correo y la contraseña `PASSWORD_INICIAL` (por defecto `Ficct2026`);
+además se crea `admin@ficct.edu.bo` (rol Administrador, nuevo en el proyecto 2).
+
+> Las credenciales de la base **no se guardan en git**: solo en el `.env` del servidor.
+
 Instalar:
 
 ```bash

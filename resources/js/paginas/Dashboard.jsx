@@ -85,7 +85,7 @@ export default function Dashboard() {
                     <ResponsiveContainer width="100%" height={280}>
                         <BarChart data={d.ocupacion_laboratorios.map((x) => ({ ...x, horas_clase_semana: Number(x.horas_clase_semana), horas_reserva: Number(x.horas_reserva) }))}>
                             <CartesianGrid strokeDasharray="3 3" stroke={c.borde} />
-                            <XAxis dataKey="codigo" {...ejes} />
+                            <XAxis dataKey="codigo" {...ejes} interval={0} angle={-30} textAnchor="end" height={50} />
                             <YAxis {...ejes} />
                             <Tooltip {...tooltip} />
                             <Legend />

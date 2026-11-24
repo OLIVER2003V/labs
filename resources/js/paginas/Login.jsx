@@ -12,13 +12,8 @@ const CAMPOS = [
     { name: 'password', label: 'Contraseña', requerido: true, max: 100 },
 ];
 
-const DEMO = [
-    ['Administrador', 'admin@ficct.edu.bo'],
-    ['Encargado', 'encargado@ficct.edu.bo'],
-    ['Docente', 'docente@ficct.edu.bo'],
-    ['Auxiliar', 'auxiliar@ficct.edu.bo'],
-    ['Director', 'director@ficct.edu.bo'],
-];
+// Cuentas de demostración (una por rol): las envía el servidor solo si APP_DEMO_LOGIN=true
+const DEMO = window.APP?.demo ?? [];
 
 export default function Login() {
     const { login } = useAuth();
@@ -119,17 +114,19 @@ export default function Login() {
                             </button>
                         </form>
 
+                        {DEMO.length > 0 && (
                         <div className="mt-8 rounded-tema border border-dashed border-borde p-4">
                             <p className="text-sm font-semibold">Cuentas de demostración</p>
-                            <p className="text-xs text-suave">Contraseña de todas: <code className="font-mono">Ficct2026</code></p>
+                            <p className="text-xs text-suave">Contraseña inicial: <code className="font-mono">Ficct2026</code></p>
                             <div className="mt-3 flex flex-wrap gap-2">
-                                {DEMO.map(([rol, email]) => (
-                                    <button key={email} type="button" className="btn btn-secundario btn-sm" onClick={() => setV({ email, password: 'Ficct2026' })}>
+                                {DEMO.map(({ rol, email }) => (
+                                    <button key={email} type="button" className="btn btn-secundario btn-sm" title={email} onClick={() => setV({ email, password: 'Ficct2026' })}>
                                         {rol}
                                     </button>
                                 ))}
                             </div>
                         </div>
+                        )}
                     </div>
                 </section>
             </div>

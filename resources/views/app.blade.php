@@ -16,6 +16,7 @@
             base: @json(rtrim(parse_url(url('/'), PHP_URL_PATH) ?? '', '/')),
             api: @json(url('/api')),
             nombre: @json(config('app.name')),
+            demo: @json($demo ?? []),
         };
         // Aplica el tema guardado ANTES de pintar la página (evita parpadeo)
         try {

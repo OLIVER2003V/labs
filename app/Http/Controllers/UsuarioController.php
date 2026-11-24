@@ -33,7 +33,7 @@ class UsuarioController extends CrudController
     protected function reglas(Request $request, ?Model $registro): array
     {
         return [
-            'codigo' => ['required', 'regex:/^[A-Za-z0-9-]{3,20}$/', Rule::unique('usuarios', 'codigo')->ignore($registro?->id)],
+            'codigo' => ['required', 'regex:/^[A-Za-z0-9-]{1,20}$/', Rule::unique('usuarios', 'codigo')->ignore($registro?->id)],
             'nombre' => ['required', 'string', 'min:2', 'max:60', 'regex:/^[\pL\s]+$/u'],
             'apellido' => ['required', 'string', 'min:2', 'max:60', 'regex:/^[\pL\s]+$/u'],
             'email' => ['required', 'email', 'max:100', Rule::unique('usuarios', 'email')->ignore($registro?->id)],

@@ -8,7 +8,7 @@ class Equipo extends Model
 {
     protected $table = 'equipos';
 
-    protected $fillable = ['codigo', 'laboratorio_id', 'tipo', 'descripcion', 'estado'];
+    protected $fillable = ['codigo', 'activo_fijo', 'laboratorio_id', 'tipo', 'descripcion', 'estado'];
 
     protected function casts(): array
     {

@@ -19,6 +19,9 @@ return [
 
     'default' => env('DB_CONNECTION', 'sqlite'),
 
+    // Esquema del proyecto 1 (vía mail) desde donde se importan los datos reales
+    'origen_sislab' => env('ORIGEN_SISLAB', 'sislab'),
+
     /*
     |--------------------------------------------------------------------------
     | Database Connections

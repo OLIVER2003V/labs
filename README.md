@@ -44,8 +44,10 @@ npm run build                # o "npm run dev" mientras se programa
 php artisan serve            # http://127.0.0.1:8000
 ```
 
-Usuarios de demostración (contraseña **Ficct2026**): `admin@ficct.edu.bo`, `encargado@ficct.edu.bo`,
-`docente@ficct.edu.bo`, `auxiliar@ficct.edu.bo`, `director@ficct.edu.bo`.
+**Datos**: si la base tiene el esquema `sislab` (proyecto 1), `php artisan migrate:fresh --seed` importa sus datos
+reales (`database/seeders/ImportarSislabSeeder.php`); si no, carga datos de demostración (`ORIGEN_DATOS=demo`).
+Todos los usuarios entran con su correo y la contraseña inicial **Ficct2026**; administrador: `admin@ficct.edu.bo`.
+Con `APP_DEMO_LOGIN=true` el login muestra un botón con una cuenta real por rol.
 
 Pasarela simulada: tarjeta `4111 1111 1111 1111` (aprobada) · `4000 0000 0000 0002` (rechazada).
 

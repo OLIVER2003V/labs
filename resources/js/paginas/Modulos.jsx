@@ -187,14 +187,15 @@ export const Equipos = () => (
             { name: 'estado', label: 'Estado', opciones: ['OPERATIVO', 'EN_REPARACION', 'BAJA'] },
         ]}
         columnas={[
-            { key: 'codigo', label: 'Código', render: (f) => <strong>{f.codigo}</strong> },
+            { key: 'codigo', label: 'Código', render: (f) => <><strong>{f.codigo}</strong>{f.activo_fijo && <span className="block text-xs text-suave">AF {f.activo_fijo}</span>}</> },
             { key: 'laboratorio', label: 'Laboratorio', render: (f) => f.laboratorio?.codigo },
             { key: 'tipo', label: 'Tipo', render: (f) => f.tipo.charAt(0) + f.tipo.slice(1).toLowerCase() },
             { key: 'descripcion', label: 'Descripción' },
             { key: 'estado', label: 'Estado', render: (f) => <Badge valor={f.estado} /> },
         ]}
         campos={[
-            { name: 'codigo', label: 'Código', requerido: true, patron: P.codigo, mensajePatron: 'De 3 a 20 letras, números o guiones (ej: PC-41-01).', mayusculas: true },
+            { name: 'codigo', label: 'Código', requerido: true, patron: /^[A-Za-z0-9][A-Za-z0-9 ,./-]{1,19}$/, mensajePatron: 'De 2 a 20 caracteres: letras, números, espacio, coma, punto o guion (ej: LAB-41, PC-01).', mayusculas: true },
+            { name: 'activo_fijo', label: 'Activo fijo', patron: /^[A-Za-z0-9-]{3,30}$/, mensajePatron: 'De 3 a 30 letras, números o guiones (ej: U147124117399).', mayusculas: true },
             { name: 'laboratorio_id', label: 'Laboratorio', tipo: 'select', opciones: 'laboratorios', requerido: true },
             { name: 'tipo', label: 'Tipo', tipo: 'select', opciones: TIPOS_EQUIPO, requerido: true },
             { name: 'estado', label: 'Estado', tipo: 'select', opciones: ['OPERATIVO', 'EN_REPARACION', 'BAJA'], requerido: true },
@@ -366,7 +367,7 @@ export const Usuarios = () => (
         ]}
         aFormulario={(f) => ({ codigo: f.codigo, nombre: f.nombre, apellido: f.apellido, email: f.email, telefono: f.telefono ?? '', rol_id: f.rol_id, estado: f.estado, password: '' })}
         campos={[
-            { name: 'codigo', label: 'Código / Registro', requerido: true, patron: P.codigo, mensajePatron: 'De 3 a 20 letras, números o guiones.' },
+            { name: 'codigo', label: 'Código / Registro', requerido: true, patron: /^[A-Za-z0-9-]{1,20}$/, mensajePatron: 'Hasta 20 letras, números o guiones.' },
             { name: 'rol_id', label: 'Rol', tipo: 'select', opciones: 'roles', requerido: true },
             { name: 'nombre', label: 'Nombre(s)', requerido: true, min: 2, max: 60, patron: P.soloLetras, mensajePatron: 'Solo letras y espacios.' },
             { name: 'apellido', label: 'Apellido(s)', requerido: true, min: 2, max: 60, patron: P.soloLetras, mensajePatron: 'Solo letras y espacios.' },

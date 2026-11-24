@@ -42,7 +42,7 @@ class ReservaController extends CrudController
             'fecha' => ['required', 'date', 'after_or_equal:today'],
             'hora_inicio' => ['required', 'date_format:H:i', 'after_or_equal:07:00'],
             'hora_fin' => ['required', 'date_format:H:i', 'after:hora_inicio', 'before_or_equal:22:00'],
-            'tipo' => ['required', Rule::in(['EXAMEN', 'RECUPERACION', 'PRACTICA', 'EVENTO'])],
+            'tipo' => ['required', Rule::in(['EXAMEN', 'RECUPERACION', 'PRACTICA', 'EVENTO', 'DEFENSA'])],
             'motivo' => ['required', 'string', 'min:5', 'max:200'],
         ];
     }
