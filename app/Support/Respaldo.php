@@ -49,10 +49,10 @@ class Respaldo
     /** Lista de respaldos disponibles (más reciente primero) */
     public static function listar(): array
     {
-        $archivos = glob(self::carpeta().DIRECTORY_SEPARATOR.'respaldo_*.json') ?: [];
-        rsort($archivos);
+        $archivos = array_filter(glob(self::carpeta().DIRECTORY_SEPARATOR.'*.json') ?: [], fn ($a) => basename($a) !== 'ultimo.json');
+        usort($archivos, fn ($a, $b) => filemtime($b) <=> filemtime($a)); // más reciente primero
 
-        return $archivos;
+        return array_values($archivos);
     }
 
     /**

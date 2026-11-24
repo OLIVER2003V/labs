@@ -1,59 +1,73 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Sistema de Gestión de Laboratorios FICCT — Proyecto 2 (Web)
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+**INF513 Tecnología Web · Grupo 08 SA · UAGRM – FICCT**
 
-## About Laravel
+Sistema web en arquitectura de 3 capas para gestionar los laboratorios de computación de la FICCT:
+reservas con detección de choques, horario base, disponibilidad, inventario, incidencias, objetos encontrados,
+turnos y asistencia de auxiliares, y cobros con pasarela de pagos simulada.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+| Capa | Tecnología |
+|---|---|
+| Presentación | React 19 (SPA) + Vite + Tailwind CSS 4 + Axios + Recharts |
+| Negocio | Laravel 12 — API RESTful + Sanctum (tokens) + middleware RBAC |
+| Datos | PostgreSQL — restricciones, triggers y funciones PL/pgSQL |
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Requisitos cubiertos
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+1. Navegación con menú dinámico según los permisos del rol
+2. RBAC: 4 roles de negocio (Encargado, Docente, Auxiliar, Director) + Administrador; menú guardado en la BD
+3. API RESTful en Laravel consumida por React
+4. Matriz de acceso (middleware por ruta) y bitácora (logins exitosos/fallidos, IP, recursos más accedidos) + auditoría por triggers
+5. Temas Niños / Jóvenes / Adultos, modo día/noche/automático, tamaño de letra y alto contraste
+6. Validación en el cliente y en el servidor, con mensajes en español
+7. Contador de visitas por página en el pie de página (función PostgreSQL)
+8. Panel de estadísticas del negocio y de accesos
+9. Búsqueda global predictiva en el encabezado
+10. Pagos: métodos de pago, pagos únicos y planes de pago en cuotas
 
-## Learning Laravel
+Detalle de cada requisito y dónde está en el código: [docs/MAPA_DEFENSA.md](docs/MAPA_DEFENSA.md)
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+## Ejecutar en local
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+Requisitos: PHP 8.2+ con `pdo_pgsql`, Composer, Node 20+, PostgreSQL.
 
-## Laravel Sponsors
+```bash
+composer install
+npm install
+cp .env.example .env         # configurar DB_* (pgsql) y APP_LOCALE=es
+php artisan key:generate
+php artisan migrate --seed   # estructura + triggers + datos de demostración
+npm run build                # o "npm run dev" mientras se programa
+php artisan serve            # http://127.0.0.1:8000
+```
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+Usuarios de demostración (contraseña **Ficct2026**): `admin@ficct.edu.bo`, `encargado@ficct.edu.bo`,
+`docente@ficct.edu.bo`, `auxiliar@ficct.edu.bo`, `director@ficct.edu.bo`.
 
-### Premium Partners
+Pasarela simulada: tarjeta `4111 1111 1111 1111` (aprobada) · `4000 0000 0000 0002` (rechazada).
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+## Servidor y recuperación
 
-## Contributing
+- Despliegue en tecnoweb: [docs/DESPLIEGUE.md](docs/DESPLIEGUE.md)
+- **Manual de recuperación para la defensa**: [docs/RECUPERACION.md](docs/RECUPERACION.md)
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+```bash
+php artisan sistema:verificar      # diagnóstico
+bash deploy/restaurar.sh todo      # restauración completa (código + triggers + datos)
+```
 
-## Code of Conduct
+## Estructura
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
-
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+```
+app/Http/Controllers/   API (CrudController base + un controlador por módulo)
+app/Http/Middleware/    VerificarPermiso (matriz de acceso), RegistrarBitacora
+app/Services/           Disponibilidad (choques), PasarelaPago (simulada)
+app/Support/            Triggers (SQL), Respaldo (JSON)
+database/migrations/    Tablas, restricciones y triggers
+database/seeders/       Roles, permisos, menú y datos de demostración
+resources/js/           React: main.jsx, contexto/, componentes/, paginas/, lib/
+routes/api.php          Rutas REST con su permiso
+routes/console.php      Comandos sistema:* y respaldo:*
+deploy/                 Scripts del servidor (instalar, respaldar, restaurar)
+scripts/empaquetar.sh   Genera el paquete del servidor y el entregable
+```

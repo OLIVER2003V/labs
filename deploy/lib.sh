@@ -51,7 +51,9 @@ publicar() {
     mkdir -p "$WEB_DIR"
     rm -rf "$WEB_DIR/build"
     cp -R "$APP_DIR/public/." "$WEB_DIR/"
-    sed "s#__APP_DIR__#$APP_DIR#" "$APP_DIR/deploy/index.produccion.php" > "$WEB_DIR/index.php"
+    local ruta_php="$APP_DIR"
+    command -v cygpath >/dev/null 2>&1 && ruta_php="$(cygpath -m "$APP_DIR")"  # solo en Windows (pruebas locales)
+    sed "s#__APP_DIR__#$ruta_php#" "$APP_DIR/deploy/index.produccion.php" > "$WEB_DIR/index.php"
     # Si el código quedó dentro de la carpeta web, se bloquea el acceso HTTP a esa carpeta
     case "$APP_DIR" in
         "$WEB_DIR"/*) printf 'Require all denied\nDeny from all\n' > "$APP_DIR/.htaccess"; amarillo "APP_DIR está dentro de la web: se protegió con .htaccess" ;;

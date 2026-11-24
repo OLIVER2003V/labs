@@ -190,7 +190,7 @@ class DatosSeeder extends Seeder
 
             $estado = match (true) {
                 ! $libre => 'RECHAZADA',
-                $futura && mt_rand(1, 10) <= 4 => 'PENDIENTE',
+                $futura && mt_rand(1, 10) <= 6 => 'PENDIENTE',
                 mt_rand(1, 10) <= 1 => 'CANCELADA',
                 default => 'APROBADA',
             };
@@ -368,13 +368,17 @@ class DatosSeeder extends Seeder
                 'monto_total' => $total, 'nro_cuotas' => $nc, 'estado' => 'VIGENTE', 'creado_por' => $this->u['encargado@ficct.edu.bo'],
                 'created_at' => $creado, 'updated_at' => $creado]);
             $monto = round($total / $nc, 2);
+            // Primero se crean TODAS las cuotas; recién después se pagan (si no, el trigger
+            // tg_cuota_cierra_plan cerraría el plan antes de que existan las cuotas siguientes)
+            $cuotas = [];
             for ($k = 1; $k <= $nc; $k++) {
                 $vence = $creado->copy()->addDays(10)->addMonthsNoOverflow($k - 1);
-                $pagada = $k <= $pagadas;
-                $cuota = DB::table('cuotas')->insertGetId(['plan_id' => $plan, 'numero' => $k,
+                $cuotas[$k] = [$vence, DB::table('cuotas')->insertGetId(['plan_id' => $plan, 'numero' => $k,
                     'monto' => $k < $nc ? $monto : round($total - $monto * ($nc - 1), 2),
-                    'fecha_vencimiento' => $vence->toDateString(), 'estado' => 'PENDIENTE', 'pagado_en' => null] + $this->ahora());
-                if ($pagada) {
+                    'fecha_vencimiento' => $vence->toDateString(), 'estado' => 'PENDIENTE', 'pagado_en' => null] + $this->ahora())];
+            }
+            foreach ($cuotas as $k => [$vence, $cuota]) {
+                if ($k <= $pagadas) {
                     $fechaPago = $vence->copy()->subDays(mt_rand(0, 5))->setTime(mt_rand(8, 20), mt_rand(0, 59));
                     $trx++;
                     DB::table('transacciones')->insert(['codigo' => 'TRX-'.str_pad($trx, 6, '0', STR_PAD_LEFT), 'usuario_id' => $this->u[$email],
