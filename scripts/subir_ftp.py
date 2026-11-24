@@ -93,9 +93,8 @@ def archivos_a_subir(solo_codigo):
     if not solo_codigo:
         # Dentro del servidor la BD se alcanza por 127.0.0.1 (por el nombre público la conexión es rechazada)
         env = open(ENV_SERVIDOR, encoding='utf-8').read()
-        env = '
-'.join(f"DB_HOST={os.environ.get('DB_HOST_EN_SERVIDOR', '127.0.0.1')}" if l.startswith('DB_HOST=') else l for l in env.splitlines()) + '
-'
+        host = os.environ.get('DB_HOST_EN_SERVIDOR', '127.0.0.1')
+        env = '\n'.join(f'DB_HOST={host}' if l.startswith('DB_HOST=') else l for l in env.splitlines()) + '\n'
         salida.append(('_app/.env', env.encode()))
     return salida
 
