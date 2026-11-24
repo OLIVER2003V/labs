@@ -1,11 +1,316 @@
 @import 'tailwindcss';
 
-@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
-@source '../../storage/framework/views/*.php';
 @source '../**/*.blade.php';
-@source '../**/*.js';
+@source '../js/**/*.{js,jsx}';
 
-@theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
+/*
+ * TEMAS DINÁMICOS
+ * Los colores no se escriben fijos en los componentes: se usan clases como bg-primario o text-texto,
+ * que apuntan a variables CSS. Cambiar data-tema / data-modo / data-contraste en <html> cambia todo el sitio.
+ *   data-tema:      ninos | jovenes | adultos
+ *   data-modo:      claro | oscuro
+ *   data-contraste: alto  (accesibilidad WCAG)
+ * El tamaño de fuente se controla con font-size en <html> (todo usa rem).
+ */
+@theme inline {
+    --color-fondo: var(--c-fondo);
+    --color-superficie: var(--c-superficie);
+    --color-superficie-2: var(--c-superficie-2);
+    --color-borde: var(--c-borde);
+    --color-texto: var(--c-texto);
+    --color-suave: var(--c-suave);
+    --color-primario: var(--c-primario);
+    --color-primario-hover: var(--c-primario-hover);
+    --color-sobre-primario: var(--c-sobre-primario);
+    --color-primario-tenue: var(--c-primario-tenue);
+    --color-acento: var(--c-acento);
+    --color-exito: var(--c-exito);
+    --color-exito-tenue: var(--c-exito-tenue);
+    --color-alerta: var(--c-alerta);
+    --color-alerta-tenue: var(--c-alerta-tenue);
+    --color-peligro: var(--c-peligro);
+    --color-peligro-tenue: var(--c-peligro-tenue);
+    --color-info: var(--c-info);
+    --color-info-tenue: var(--c-info-tenue);
+    --font-sans: var(--fuente-tema);
+    --radius-tema: var(--radio);
+}
+
+/* ---------- ADULTOS (sobrio, institucional) ---------- */
+:root,
+[data-tema='adultos'] {
+    --fuente-tema: 'Inter', ui-sans-serif, system-ui, 'Segoe UI', sans-serif;
+    --radio: 0.5rem;
+    --c-fondo: #f4f6f9;
+    --c-superficie: #ffffff;
+    --c-superficie-2: #eef1f6;
+    --c-borde: #d5dbe5;
+    --c-texto: #172033;
+    --c-suave: #56607a;
+    --c-primario: #1d4e89;
+    --c-primario-hover: #163d6c;
+    --c-sobre-primario: #ffffff;
+    --c-primario-tenue: #e3ecf7;
+    --c-acento: #0f8b8d;
+    --c-exito: #1e7b4c;
+    --c-exito-tenue: #e2f4ea;
+    --c-alerta: #9a6100;
+    --c-alerta-tenue: #fff3d6;
+    --c-peligro: #b3261e;
+    --c-peligro-tenue: #fde7e5;
+    --c-info: #1f6fb2;
+    --c-info-tenue: #e2effa;
+}
+[data-tema='adultos'][data-modo='oscuro'] {
+    --c-fondo: #0f1520;
+    --c-superficie: #182131;
+    --c-superficie-2: #212c3f;
+    --c-borde: #33405a;
+    --c-texto: #e7ecf4;
+    --c-suave: #a3aec4;
+    --c-primario: #6aa5e8;
+    --c-primario-hover: #8cbbf0;
+    --c-sobre-primario: #0b1422;
+    --c-primario-tenue: #1d3352;
+    --c-acento: #4fc7c9;
+    --c-exito: #5fd497;
+    --c-exito-tenue: #173b2a;
+    --c-alerta: #f2bd55;
+    --c-alerta-tenue: #3b2f14;
+    --c-peligro: #f2867e;
+    --c-peligro-tenue: #43201e;
+    --c-info: #79b8ef;
+    --c-info-tenue: #193551;
+}
+
+/* ---------- JÓVENES (vibrante, moderno) ---------- */
+[data-tema='jovenes'] {
+    --fuente-tema: 'Poppins', ui-sans-serif, system-ui, sans-serif;
+    --radio: 0.9rem;
+    --c-fondo: #f6f3ff;
+    --c-superficie: #ffffff;
+    --c-superficie-2: #efe9ff;
+    --c-borde: #ddd2fb;
+    --c-texto: #1c1433;
+    --c-suave: #5e5680;
+    --c-primario: #6d28d9;
+    --c-primario-hover: #5b21b6;
+    --c-sobre-primario: #ffffff;
+    --c-primario-tenue: #ede4ff;
+    --c-acento: #db2777;
+    --c-exito: #0f7a55;
+    --c-exito-tenue: #dcf7ec;
+    --c-alerta: #a15c00;
+    --c-alerta-tenue: #fff0d4;
+    --c-peligro: #c0263b;
+    --c-peligro-tenue: #ffe4e8;
+    --c-info: #2563eb;
+    --c-info-tenue: #e3ecff;
+}
+[data-tema='jovenes'][data-modo='oscuro'] {
+    --c-fondo: #120d22;
+    --c-superficie: #1c1633;
+    --c-superficie-2: #272044;
+    --c-borde: #3c3263;
+    --c-texto: #f0ebff;
+    --c-suave: #b4a9d8;
+    --c-primario: #a78bfa;
+    --c-primario-hover: #c4b5fd;
+    --c-sobre-primario: #150d2b;
+    --c-primario-tenue: #2e2457;
+    --c-acento: #f472b6;
+    --c-exito: #4ade80;
+    --c-exito-tenue: #133626;
+    --c-alerta: #fbbf24;
+    --c-alerta-tenue: #3b2d10;
+    --c-peligro: #fb7185;
+    --c-peligro-tenue: #44182a;
+    --c-info: #7aa2ff;
+    --c-info-tenue: #1c2c55;
+}
+
+/* ---------- NIÑOS (cálido, redondeado, más grande) ---------- */
+[data-tema='ninos'] {
+    --fuente-tema: 'Baloo 2', 'Comic Sans MS', ui-rounded, system-ui, sans-serif;
+    --radio: 1.4rem;
+    --c-fondo: #fff8ec;
+    --c-superficie: #ffffff;
+    --c-superficie-2: #fff0d6;
+    --c-borde: #f6d8a8;
+    --c-texto: #2b2118;
+    --c-suave: #6f5a44;
+    --c-primario: #d9480f;
+    --c-primario-hover: #b93d0c;
+    --c-sobre-primario: #ffffff;
+    --c-primario-tenue: #ffe6d5;
+    --c-acento: #2b8a3e;
+    --c-exito: #2b8a3e;
+    --c-exito-tenue: #e0f6e4;
+    --c-alerta: #a35d00;
+    --c-alerta-tenue: #fff1c7;
+    --c-peligro: #c92a2a;
+    --c-peligro-tenue: #ffe3e3;
+    --c-info: #1971c2;
+    --c-info-tenue: #e0efff;
+}
+[data-tema='ninos'][data-modo='oscuro'] {
+    --c-fondo: #1f1710;
+    --c-superficie: #2b2118;
+    --c-superficie-2: #3a2c1f;
+    --c-borde: #5a4330;
+    --c-texto: #fff4e3;
+    --c-suave: #d8bf9f;
+    --c-primario: #ff922b;
+    --c-primario-hover: #ffa94d;
+    --c-sobre-primario: #2b1608;
+    --c-primario-tenue: #4a2c14;
+    --c-acento: #69db7c;
+    --c-exito: #69db7c;
+    --c-exito-tenue: #1d3a22;
+    --c-alerta: #ffd43b;
+    --c-alerta-tenue: #403310;
+    --c-peligro: #ff8787;
+    --c-peligro-tenue: #4a1e1e;
+    --c-info: #74c0fc;
+    --c-info-tenue: #173350;
+}
+[data-tema='ninos'] body {
+    letter-spacing: 0.01em;
+}
+
+/* ---------- ALTO CONTRASTE (prioridad sobre cualquier tema) ---------- */
+[data-contraste='alto'] {
+    --c-fondo: #ffffff;
+    --c-superficie: #ffffff;
+    --c-superficie-2: #f0f0f0;
+    --c-borde: #000000;
+    --c-texto: #000000;
+    --c-suave: #1a1a1a;
+    --c-primario: #0033cc;
+    --c-primario-hover: #001f80;
+    --c-sobre-primario: #ffffff;
+    --c-primario-tenue: #e6ecff;
+    --c-acento: #6a00b0;
+    --c-exito: #006100;
+    --c-exito-tenue: #e6ffe6;
+    --c-alerta: #6b4000;
+    --c-alerta-tenue: #fff4d6;
+    --c-peligro: #b00000;
+    --c-peligro-tenue: #ffe6e6;
+    --c-info: #003d99;
+    --c-info-tenue: #e6efff;
+}
+[data-contraste='alto'][data-modo='oscuro'] {
+    --c-fondo: #000000;
+    --c-superficie: #000000;
+    --c-superficie-2: #141414;
+    --c-borde: #ffffff;
+    --c-texto: #ffffff;
+    --c-suave: #f0f0f0;
+    --c-primario: #ffeb3b;
+    --c-primario-hover: #fff59d;
+    --c-sobre-primario: #000000;
+    --c-primario-tenue: #333000;
+    --c-acento: #00e5ff;
+    --c-exito: #76ff03;
+    --c-exito-tenue: #102600;
+    --c-alerta: #ffd600;
+    --c-alerta-tenue: #2b2400;
+    --c-peligro: #ff5252;
+    --c-peligro-tenue: #330000;
+    --c-info: #80d8ff;
+    --c-info-tenue: #00223a;
+}
+[data-contraste='alto'] a,
+[data-contraste='alto'] button {
+    text-decoration-thickness: 2px;
+}
+[data-contraste='alto'] .tarjeta,
+[data-contraste='alto'] input,
+[data-contraste='alto'] select,
+[data-contraste='alto'] textarea {
+    border-width: 2px !important;
+}
+
+html {
+    color-scheme: light;
+    -webkit-text-size-adjust: 100%;
+}
+html[data-modo='oscuro'] {
+    color-scheme: dark;
+}
+body {
+    background: var(--c-fondo);
+    color: var(--c-texto);
+    font-family: var(--fuente-tema);
+    transition: background-color 0.2s, color 0.2s;
+}
+
+/* Foco visible para navegación con teclado (accesibilidad) */
+:focus-visible {
+    outline: 3px solid var(--c-primario);
+    outline-offset: 2px;
+}
+
+@layer components {
+    .tarjeta {
+        @apply rounded-tema border border-borde bg-superficie shadow-sm;
+    }
+    .campo {
+        @apply w-full rounded-tema border border-borde bg-superficie px-3 py-2 text-texto placeholder:text-suave/70 focus:border-primario focus:outline-none focus:ring-2 focus:ring-primario/30 disabled:opacity-60;
+    }
+    .campo-error {
+        @apply border-peligro focus:border-peligro focus:ring-peligro/30;
+    }
+    .btn {
+        @apply inline-flex items-center justify-center gap-2 rounded-tema px-4 py-2 font-medium transition disabled:cursor-not-allowed disabled:opacity-50;
+    }
+    .btn-primario {
+        @apply bg-primario text-sobre-primario hover:bg-primario-hover;
+    }
+    .btn-secundario {
+        @apply border border-borde bg-superficie text-texto hover:bg-superficie-2;
+    }
+    .btn-peligro {
+        @apply bg-peligro text-white hover:opacity-90;
+    }
+    .btn-exito {
+        @apply bg-exito text-white hover:opacity-90;
+    }
+    .btn-fantasma {
+        @apply text-suave hover:bg-superficie-2 hover:text-texto;
+    }
+    .btn-sm {
+        @apply px-2.5 py-1 text-sm;
+    }
+    .etiqueta {
+        @apply mb-1 block text-sm font-medium text-texto;
+    }
+    .tabla th {
+        @apply bg-superficie-2 px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-suave;
+    }
+    .tabla td {
+        @apply border-t border-borde px-3 py-2.5 align-top;
+    }
+    .tabla tbody tr:hover {
+        @apply bg-superficie-2/60;
+    }
+}
+
+.solo-lector {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    * {
+        transition: none !important;
+        animation: none !important;
+    }
 }

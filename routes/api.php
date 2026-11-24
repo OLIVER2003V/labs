@@ -44,8 +44,8 @@ function crud(string $uri, string $controlador, string $recurso, array $permisos
 }
 
 // ---------- Rutas públicas ----------
-Route::post('login', [AuthController::class, 'login'])->middleware('throttle:5,1'); // máx. 5 intentos por minuto
-Route::post('visitas', [GeneralController::class, 'visita'])->middleware('throttle:120,1');
+Route::post('login', [AuthController::class, 'login'])->middleware('throttle:login'); // máx. 5 intentos por minuto (AppServiceProvider)
+Route::post('visitas', [GeneralController::class, 'visita'])->middleware('throttle:visitas');
 Route::get('estado', fn () => ['ok' => true, 'hora' => now()->toDateTimeString()]);
 
 // ---------- Rutas protegidas ----------

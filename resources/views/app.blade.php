@@ -30,7 +30,7 @@
         } catch (e) {}
     </script>
     @viteReactRefresh
-    @vite(['resources/css/app.css', 'resources/js/main.jsx'])
+    @vite('resources/js/main.jsx')
 </head>
 <body>
     <noscript>Este sistema necesita JavaScript habilitado.</noscript>
