@@ -186,7 +186,7 @@ export function Campo({ campo, valor, onChange, error, valores = {} }) {
 const COLORES_ESTADO = {
     exito: ['ACTIVO', 'DISPONIBLE', 'APROBADA', 'OPERATIVO', 'RESUELTA', 'ENTREGADO', 'PUNTUAL', 'PAGADA', 'PAGADO', 'LOGIN_OK', 'VIGENTE_OK', 'INSERT'],
     alerta: ['PENDIENTE', 'MANTENIMIENTO', 'EN_REPARACION', 'EN_ATENCION', 'ATRASO', 'PLANIFICADO', 'EN_CUSTODIA', 'VIGENTE', 'UPDATE'],
-    peligro: ['INACTIVO', 'INHABILITADO', 'RECHAZADA', 'BAJA', 'FALTA', 'LOGIN_FALLIDO', 'DENEGADO', 'ANULADO', 'DELETE'],
+    peligro: ['EXPIRADA', 'INACTIVO', 'INHABILITADO', 'RECHAZADA', 'BAJA', 'FALTA', 'LOGIN_FALLIDO', 'DENEGADO', 'ANULADO', 'DELETE'],
     info: ['CANCELADA', 'CERRADO', 'PERMISO', 'ACCESO', 'LOGOUT'],
 };
 export function Badge({ valor, children }) {

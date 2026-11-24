@@ -2,6 +2,9 @@
 
 namespace App\Providers;
 
+use App\Services\Pagos\PagoFacilQr;
+use App\Services\Pagos\PasarelaQr;
+use App\Services\Pagos\SimuladaQr;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -11,7 +14,11 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        //
+        // Pasarela de cobro por QR según .env (PAGOS_PASARELA=simulada | pagofacil)
+        $this->app->bind(PasarelaQr::class, fn () => match (config('pagos.pasarela')) {
+            'pagofacil' => new PagoFacilQr,
+            default => new SimuladaQr,
+        });
     }
 
     public function boot(): void

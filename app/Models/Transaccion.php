@@ -8,11 +8,11 @@ class Transaccion extends Model
 {
     protected $table = 'transacciones';
 
-    protected $fillable = ['codigo', 'usuario_id', 'metodo_pago_id', 'cuota_id', 'concepto_id', 'descripcion', 'monto', 'estado', 'autorizacion', 'mensaje'];
+    protected $fillable = ['codigo', 'usuario_id', 'metodo_pago_id', 'cuota_id', 'concepto_id', 'descripcion', 'monto', 'estado', 'autorizacion', 'mensaje', 'pasarela', 'referencia_externa', 'qr_contenido', 'expira_en'];
 
     protected function casts(): array
     {
-        return ['monto' => 'decimal:2'];
+        return ['monto' => 'decimal:2', 'expira_en' => 'datetime'];
     }
 
     public function usuario(): \Illuminate\Database\Eloquent\Relations\BelongsTo

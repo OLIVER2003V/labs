@@ -63,7 +63,9 @@ Flujo: React → `lib/api.js` (Axios + token Bearer) → `routes/api.php` → mi
 - Barra en el encabezado (`Layout.jsx` → `BuscadorGlobal`): predictiva con retardo de 300 ms, flechas + Enter.
 - `GET /api/buscar?q=` (`GeneralController::buscar`): solo busca en lo que el rol puede ver.
 
-## 10. Pagos electrónicos (pasarela simulada)
+## 10. Pagos electrónicos (QR PagoFácil + pasarela simulada)
+- **QR PagoFácil**: el usuario genera un QR, lo paga con la app de su banco y el sistema lo confirma por callback o consulta de estado. Detalle: [PAGOFACIL.md](PAGOFACIL.md).
+  Hoy funciona en modo simulado (`PAGOS_PASARELA=simulada`, botón “Simular pago desde el banco”); con credenciales se cambia a `pagofacil`.
 - Métodos de pago por usuario (tarjeta con Luhn y vencimiento, QR, billetera). Solo se guardan los últimos 4 dígitos + token; el CVV nunca.
 - Pago único (concepto del catálogo) y **planes de pago en cuotas** (Encargado los crea; el usuario paga en orden).
 - `app/Services/PasarelaPago.php`: tarjeta `…0002` → rechazada (para demostrar), > Bs 5000 → rechazada.

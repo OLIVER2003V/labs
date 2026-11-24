@@ -14,6 +14,7 @@ use App\Http\Controllers\LaboratorioController;
 use App\Http\Controllers\MateriaController;
 use App\Http\Controllers\ObjetoEncontradoController;
 use App\Http\Controllers\PagoController;
+use App\Http\Controllers\PagoQrController;
 use App\Http\Controllers\ReservaController;
 use App\Http\Controllers\RolController;
 use App\Http\Controllers\SemestreController;
@@ -46,6 +47,8 @@ function crud(string $uri, string $controlador, string $recurso, array $permisos
 // ---------- Rutas públicas ----------
 Route::post('login', [AuthController::class, 'login'])->middleware('throttle:login'); // máx. 5 intentos por minuto (AppServiceProvider)
 Route::post('visitas', [GeneralController::class, 'visita'])->middleware('throttle:visitas');
+// Aviso de PagoFácil cuando se paga un QR (sin token: lo llama la pasarela)
+Route::post('pagos/pagofacil/callback', [PagoQrController::class, 'callback'])->middleware('throttle:60,1');
 Route::get('estado', fn () => ['ok' => true, 'hora' => now()->toDateTimeString()]);
 
 // ---------- Rutas protegidas ----------
@@ -120,6 +123,9 @@ Route::middleware(['auth:sanctum', 'bitacora'])->group(function () {
     Route::post('pagos/cuotas/{id}/pagar', [PagoController::class, 'pagarCuota'])->middleware('permiso:pagos.pagar');
     Route::post('pagos/unico', [PagoController::class, 'pagoUnico'])->middleware('permiso:pagos.pagar');
     Route::get('pagos/transacciones', [PagoController::class, 'transacciones'])->middleware('permiso:pagos.ver');
+    Route::post('pagos/qr', [PagoQrController::class, 'iniciar'])->middleware('permiso:pagos.pagar');
+    Route::get('pagos/transacciones/{id}/estado', [PagoQrController::class, 'estado'])->whereNumber('id')->middleware('permiso:pagos.ver');
+    Route::post('pagos/simulador/{id}/pagar', [PagoQrController::class, 'simularPago'])->whereNumber('id')->middleware('permiso:pagos.pagar');
     crud('conceptos', ConceptoPagoController::class, 'conceptos', ['ver' => 'pagos.ver']);
 });
 

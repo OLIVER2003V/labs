@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import QRCode from 'qrcode';
 import { Link } from 'react-router-dom';
 import { Ban, CheckCircle2, CreditCard, Loader2, Plus, QrCode, Search, Smartphone, Star, Trash2, XCircle } from 'lucide-react';
 import api, { erroresCampos, mensajeError } from '../lib/api';
@@ -11,34 +12,109 @@ import { Badge, Cargando, Confirmar, Encabezado, Formulario, Modal, Paginacion, 
 const ICONO_METODO = { TARJETA: CreditCard, QR: QrCode, BILLETERA: Smartphone };
 const etiquetaMetodo = (m) => `${m.alias} · ${m.marca ?? m.tipo}${m.ultimos4 ? ` •••• ${m.ultimos4}` : ''}`;
 
-/** Modal de la pasarela simulada: elegir método → procesar → comprobante */
-function PasarelaModal({ abierto, titulo, monto, onCerrar, onPagar }) {
+/** Pantalla del QR: muestra el código, cuenta regresiva y consulta el estado cada 3 s hasta que se pague */
+function PantallaQr({ qr, onTerminar }) {
+    const notificar = useToast();
+    const [info, setInfo] = useState(qr);
+    const [imagen, setImagen] = useState(qr.qr_es_imagen ? `data:image/png;base64,${qr.qr}` : null);
+    const [ahora, setAhora] = useState(Date.now());
+    const trx = info.data;
+
+    useEffect(() => {
+        if (!qr.qr_es_imagen && qr.qr) QRCode.toDataURL(qr.qr, { width: 260, margin: 1 }).then(setImagen);
+    }, [qr]);
+
+    useEffect(() => {
+        const reloj = setInterval(() => setAhora(Date.now()), 1000);
+        const consulta = setInterval(async () => {
+            try {
+                const { data } = await api.get(`/pagos/transacciones/${trx.id}/estado`);
+                setInfo(data);
+                if (data.data.estado !== 'PENDIENTE') onTerminar({ ok: data.data.estado === 'APROBADA', message: data.message, data: data.data });
+            } catch {
+                /* se reintenta en la siguiente vuelta */
+            }
+        }, 3000);
+        return () => {
+            clearInterval(reloj);
+            clearInterval(consulta);
+        };
+    }, [trx.id, onTerminar]);
+
+    const restante = Math.max(0, Math.floor((new Date(trx.expira_en).getTime() - ahora) / 1000));
+    const simular = async () => {
+        try {
+            notificar((await api.post(`/pagos/simulador/${trx.id}/pagar`)).data.message, 'info');
+        } catch (e) {
+            notificar(mensajeError(e), 'error');
+        }
+    };
+
+    return (
+        <div className="flex flex-col items-center gap-3 text-center">
+            <p className="text-sm text-suave">Escanee con la app de su banco (QR Simple / PagoFácil)</p>
+            <div className="rounded-tema border border-borde bg-white p-3">
+                {imagen ? <img src={imagen} alt={`Código QR para pagar ${bs(trx.monto)}`} className="size-60" /> : <Loader2 className="m-24 size-12 animate-spin text-primario" />}
+            </div>
+            <p className="text-2xl font-bold">{bs(trx.monto)}</p>
+            <p className="text-xs text-suave">Transacción <span className="font-mono">{trx.codigo}</span> · Ref. <span className="font-mono">{trx.referencia_externa}</span></p>
+            <p className="flex items-center gap-2 text-sm font-medium" role="status">
+                <Loader2 className="size-4 animate-spin" aria-hidden /> Esperando el pago… vence en {Math.floor(restante / 60)}:{String(restante % 60).padStart(2, '0')}
+            </p>
+            {imagen && <a className="btn btn-secundario btn-sm" href={imagen} download={`${trx.codigo}.png`}>Descargar QR</a>}
+            {info.simulada && (
+                <div className="mt-2 w-full rounded-tema border border-dashed border-alerta bg-alerta-tenue p-3 text-sm">
+                    <p className="font-semibold text-alerta">Modo simulado (PAGOS_PASARELA=simulada)</p>
+                    <p className="mb-2 text-suave">Este botón hace de “app del banco”: marca el QR como pagado y el sistema lo detecta solo.</p>
+                    <button className="btn btn-primario btn-sm" onClick={simular}>Simular pago desde el banco</button>
+                </div>
+            )}
+        </div>
+    );
+}
+
+/**
+ * Modal de pago: QR PagoFácil (o simulado) o un método guardado (tarjeta / billetera, pasarela interna simulada)
+ * objetivo = { cuota_id } o { concepto_id }   ·   onPagar(metodoId) paga con un método guardado
+ */
+function PasarelaModal({ abierto, titulo, monto, objetivo, onCerrar, onPagar }) {
     const [metodos, setMetodos] = useState(null);
-    const [metodo, setMetodo] = useState('');
-    const [estado, setEstado] = useState('elegir'); // elegir | procesando | resultado
+    const [metodo, setMetodo] = useState('qr');
+    const [estado, setEstado] = useState('elegir'); // elegir | procesando | qr | resultado
+    const [qr, setQr] = useState(null);
     const [resultado, setResultado] = useState(null);
+    const terminar = useCallback((r) => {
+        setResultado(r);
+        setEstado('resultado');
+    }, []);
 
     useEffect(() => {
         if (!abierto) return;
         setEstado('elegir');
         setResultado(null);
-        api.get('/pagos/metodos').then((r) => {
-            setMetodos(r.data);
-            setMetodo(String(r.data.find((m) => m.predeterminado)?.id ?? r.data[0]?.id ?? ''));
-        });
+        setQr(null);
+        setMetodo('qr');
+        api.get('/pagos/metodos').then((r) => setMetodos(r.data)).catch(() => setMetodos([]));
     }, [abierto]);
 
     const pagar = async () => {
         setEstado('procesando');
-        await new Promise((r) => setTimeout(r, 1200)); // simula la espera del banco
         try {
+            if (metodo === 'qr') {
+                const { data } = await api.post('/pagos/qr', objetivo);
+                setQr(data);
+                setEstado('qr');
+                return;
+            }
+            await new Promise((r) => setTimeout(r, 1200)); // simula la espera del banco
             const { data } = await onPagar(Number(metodo));
-            setResultado({ ok: true, ...data });
+            terminar({ ok: true, ...data });
         } catch (e) {
-            setResultado({ ok: false, message: mensajeError(e), data: e.response?.data?.data });
+            terminar({ ok: false, message: mensajeError(e), data: e.response?.data?.data });
         }
-        setEstado('resultado');
     };
+
+    const opcion = (activo) => `flex cursor-pointer items-center gap-3 rounded-tema border p-3 ${activo ? 'border-primario bg-primario-tenue' : 'border-borde'}`;
 
     return (
         <Modal abierto={abierto} titulo={titulo} onCerrar={estado === 'procesando' ? () => {} : onCerrar}>
@@ -46,41 +122,42 @@ function PasarelaModal({ abierto, titulo, monto, onCerrar, onPagar }) {
                 <>
                     <p className="text-suave">Monto a pagar</p>
                     <p className="mb-4 text-3xl font-bold">{bs(monto)}</p>
-                    {metodos === null ? <Cargando /> : !metodos.length ? (
-                        <div className="rounded-tema bg-alerta-tenue p-4 text-sm">
-                            No tiene métodos de pago registrados. <Link to="/pagos/metodos" className="font-semibold underline">Registrar uno</Link>
-                        </div>
-                    ) : (
-                        <fieldset className="flex flex-col gap-2">
-                            <legend className="etiqueta">Método de pago</legend>
-                            {metodos.map((m) => {
-                                const I = ICONO_METODO[m.tipo];
-                                return (
-                                    <label key={m.id} className={`flex cursor-pointer items-center gap-3 rounded-tema border p-3 ${String(m.id) === metodo ? 'border-primario bg-primario-tenue' : 'border-borde'}`}>
-                                        <input type="radio" name="metodo" value={m.id} checked={String(m.id) === metodo} onChange={(e) => setMetodo(e.target.value)} className="accent-[var(--c-primario)]" />
-                                        <I className="size-5" aria-hidden /> {etiquetaMetodo(m)}
-                                    </label>
-                                );
-                            })}
-                        </fieldset>
-                    )}
-                    <p className="mt-3 text-xs text-suave">Pasarela simulada: las tarjetas terminadas en 0002 son rechazadas por fondos insuficientes.</p>
+                    <fieldset className="flex flex-col gap-2">
+                        <legend className="etiqueta">Forma de pago</legend>
+                        <label className={opcion(metodo === 'qr')}>
+                            <input type="radio" name="metodo" value="qr" checked={metodo === 'qr'} onChange={() => setMetodo('qr')} className="accent-[var(--c-primario)]" />
+                            <QrCode className="size-5" aria-hidden />
+                            <span><strong>QR PagoFácil</strong><span className="block text-xs text-suave">Pague desde la app de cualquier banco</span></span>
+                        </label>
+                        {metodos === null ? <Cargando /> : metodos.map((m) => {
+                            const I = ICONO_METODO[m.tipo];
+                            return (
+                                <label key={m.id} className={opcion(String(m.id) === metodo)}>
+                                    <input type="radio" name="metodo" value={m.id} checked={String(m.id) === metodo} onChange={(e) => setMetodo(e.target.value)} className="accent-[var(--c-primario)]" />
+                                    <I className="size-5" aria-hidden /> {etiquetaMetodo(m)}
+                                </label>
+                            );
+                        })}
+                    </fieldset>
+                    {metodos?.length === 0 && <p className="mt-2 text-xs text-suave">¿Prefiere tarjeta? <Link to="/pagos/metodos" className="underline">Registre un método de pago</Link>.</p>}
+                    {metodo !== 'qr' && <p className="mt-3 text-xs text-suave">Pasarela interna simulada: las tarjetas terminadas en 0002 son rechazadas por fondos insuficientes.</p>}
                     <div className="mt-5 flex justify-end gap-2">
                         <button className="btn btn-secundario" onClick={onCerrar}>Cancelar</button>
-                        <button className="btn btn-primario" disabled={!metodo} onClick={pagar}>Pagar {bs(monto)}</button>
+                        <button className="btn btn-primario" disabled={!metodo} onClick={pagar}>{metodo === 'qr' ? 'Generar QR' : `Pagar ${bs(monto)}`}</button>
                     </div>
                 </>
             )}
             {estado === 'procesando' && (
                 <div className="flex flex-col items-center gap-3 py-8" role="status">
                     <Loader2 className="size-12 animate-spin text-primario" aria-hidden />
-                    <p className="font-medium">Procesando pago con la pasarela…</p>
+                    <p className="font-medium">{metodo === 'qr' ? 'Generando el QR de pago…' : 'Procesando pago con la pasarela…'}</p>
                 </div>
             )}
+            {estado === 'qr' && qr && <PantallaQr qr={qr} onTerminar={terminar} />}
             {estado === 'resultado' && resultado && (
                 <div className="flex flex-col items-center gap-2 py-4 text-center">
                     {resultado.ok ? <CheckCircle2 className="size-14 text-exito" aria-hidden /> : <XCircle className="size-14 text-peligro" aria-hidden />}
-                    <p className="text-xl font-bold">{resultado.ok ? 'Pago aprobado' : 'Pago rechazado'}</p>
+                    <p className="text-xl font-bold">{resultado.ok ? 'Pago aprobado' : resultado.data?.estado === 'EXPIRADA' ? 'QR vencido' : 'Pago rechazado'}</p>
                     <p className="text-suave">{resultado.message}</p>
                     {resultado.data && (
                         <dl className="mt-3 grid w-full grid-cols-2 gap-1 rounded-tema bg-superficie-2 p-3 text-left text-sm">
@@ -165,7 +242,7 @@ export function MisPagos() {
 
     return (
         <>
-            <Encabezado titulo="Pagos" descripcion="Pague sus cuotas o un concepto único con tarjeta, QR o billetera móvil (pasarela simulada).">
+            <Encabezado titulo="Pagos" descripcion="Pague sus cuotas o un concepto único con QR PagoFácil o con un método de pago guardado.">
                 {puede('pagos.pagar') && <Link to="/pagos/metodos" className="btn btn-secundario"><CreditCard className="size-4" aria-hidden /> Mis métodos de pago</Link>}
             </Encabezado>
 
@@ -183,6 +260,7 @@ export function MisPagos() {
                                     onPagar={puede('pagos.pagar') ? (plan, c) => setPago({
                                         titulo: `Cuota ${c.numero}/${plan.nro_cuotas}: ${plan.descripcion}`,
                                         monto: c.monto,
+                                        objetivo: { cuota_id: c.id },
                                         ejecutar: (metodo) => api.post(`/pagos/cuotas/${c.id}/pagar`, { metodo_pago_id: metodo }),
                                     }) : null}
                                 />
@@ -206,6 +284,7 @@ export function MisPagos() {
                             onClick={() => setPago({
                                 titulo: `Pago único: ${elegido.label.split(' - Bs')[0]}`,
                                 monto: elegido.monto,
+                                objetivo: { concepto_id: elegido.id },
                                 ejecutar: (metodo) => api.post('/pagos/unico', { concepto_id: elegido.id, metodo_pago_id: metodo }),
                             })}
                         >
@@ -237,7 +316,7 @@ export function MisPagos() {
                                         <td className="whitespace-nowrap">{fechaHora(t.created_at)}</td>
                                         {verTodos && <td>{t.usuario?.nombre_completo}</td>}
                                         <td>{t.descripcion}</td>
-                                        <td className="text-xs">{t.metodo ? etiquetaMetodo(t.metodo) : '—'}</td>
+                                        <td className="text-xs">{t.metodo ? etiquetaMetodo(t.metodo) : { pagofacil: 'QR PagoFácil', simulada: 'QR (simulado)' }[t.pasarela] ?? '—'}</td>
                                         <td className="font-semibold">{bs(t.monto)}</td>
                                         <td><Badge valor={t.estado} />{t.estado === 'RECHAZADA' && <span className="block text-xs text-suave">{t.mensaje}</span>}</td>
                                     </tr>
@@ -253,6 +332,7 @@ export function MisPagos() {
                 abierto={!!pago}
                 titulo={pago?.titulo}
                 monto={pago?.monto}
+                objetivo={pago?.objetivo}
                 onPagar={(metodo) => pago.ejecutar(metodo)}
                 onCerrar={() => {
                     setPago(null);
