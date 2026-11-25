@@ -16,7 +16,7 @@ class BitacoraController extends Controller
     public function index(Request $request): JsonResponse
     {
         $request->validate([
-            'evento' => ['nullable', Rule::in(['LOGIN_OK', 'LOGIN_FALLIDO', 'LOGOUT', 'ACCESO', 'DENEGADO'])],
+            'evento' => ['nullable', Rule::in(['LOGIN_OK', 'LOGIN_FALLIDO', 'LOGOUT', 'ACCESO', 'DENEGADO', 'REGISTRO'])],
             'desde' => ['nullable', 'date'],
             'hasta' => ['nullable', 'date', 'after_or_equal:desde'],
         ]);

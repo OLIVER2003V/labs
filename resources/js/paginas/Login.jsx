@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { CalendarCheck, Eye, EyeOff, Loader2, LogIn, ShieldCheck, Wrench } from 'lucide-react';
 import { Isotipo, LogoCompleto } from '../componentes/Logo';
 import { useAuth } from '../contexto/AuthContext';
@@ -63,8 +64,7 @@ export default function Login() {
                     <div className="w-full max-w-md">
                         <Isotipo className="mb-6 h-20 w-auto lg:hidden" />
                         <p className="font-[Montserrat] text-xs font-semibold tracking-[0.25em] text-acento uppercase">Laboratorios 4to Piso</p>
-                        <h2 className="mt-1 font-titulo text-4xl font-bold low
-                        ">Iniciar sesión</h2>
+                        <h2 className="mt-1 font-titulo text-4xl font-bold uppercase">Iniciar sesión</h2>
                         <p className="mt-1 text-suave">Ingrese con su correo institucional.</p>
 
                         {error && (
@@ -110,6 +110,11 @@ export default function Login() {
                                 {enviando ? <Loader2 className="size-5 animate-spin" aria-hidden /> : <LogIn className="size-5" aria-hidden />} Ingresar
                             </button>
                         </form>
+
+                        <p className="mt-5 rounded-tema border border-borde bg-superficie p-3 text-center text-sm">
+                            ¿Eres estudiante de la FICCT y necesitas reservar laboratorios?{' '}
+                            <Link to="/registro" className="font-semibold text-primario underline">Solicita tu cuenta</Link>
+                        </p>
 
                         {DEMO.length > 0 && (
                         <div className="mt-8 rounded-tema border border-dashed border-borde p-4">

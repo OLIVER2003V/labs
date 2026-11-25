@@ -6,6 +6,7 @@ import { TemaProvider } from './contexto/TemaContext';
 import { Cargando, ToastProvider } from './componentes/ui';
 import Layout from './componentes/Layout';
 import Login from './paginas/Login';
+import Registro from './paginas/Registro';
 import Inicio from './paginas/Inicio';
 import Dashboard from './paginas/Dashboard';
 import Disponibilidad from './paginas/Disponibilidad';
@@ -60,6 +61,7 @@ function App() {
     return (
         <Routes>
             <Route path="/login" element={cargando ? <Cargando /> : usuario ? <Navigate to="/" replace /> : <Login />} />
+            <Route path="/registro" element={cargando ? <Cargando /> : usuario ? <Navigate to="/" replace /> : <Registro />} />
             <Route element={<Protegida><Layout /></Protegida>}>
                 <Route index element={<Inicio />} />
                 <Route path="perfil" element={<Perfil />} />

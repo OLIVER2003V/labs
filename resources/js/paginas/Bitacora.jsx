@@ -61,7 +61,7 @@ export function Bitacora() {
                     </div>
                     <select className="campo w-auto" aria-label="Evento" value={f.evento} onChange={(e) => setF({ ...f, evento: e.target.value })}>
                         <option value="">Evento: todos</option>
-                        {['LOGIN_OK', 'LOGIN_FALLIDO', 'LOGOUT', 'ACCESO', 'DENEGADO'].map((x) => <option key={x} value={x}>{x.replace('_', ' ')}</option>)}
+                        {['LOGIN_OK', 'LOGIN_FALLIDO', 'LOGOUT', 'ACCESO', 'DENEGADO', 'REGISTRO'].map((x) => <option key={x} value={x}>{x.replace('_', ' ')}</option>)}
                     </select>
                     <input type="date" className="campo w-auto" aria-label="Desde" value={f.desde} onChange={(e) => setF({ ...f, desde: e.target.value })} />
                     <input type="date" className="campo w-auto" aria-label="Hasta" value={f.hasta} onChange={(e) => setF({ ...f, hasta: e.target.value })} />

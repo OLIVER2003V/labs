@@ -26,7 +26,7 @@ export const Icono = ({ nombre, ...p }) => {
 
 /** Barra lateral: se arma con el menú que devuelve la API según los permisos del rol */
 function MenuLateral({ onNavegar }) {
-    const { menu } = useAuth();
+    const { menu, avisos } = useAuth();
     const grupos = menu.reduce((acc, m) => ((acc[m.grupo] ??= []).push(m), acc), {});
     return (
         <nav aria-label="Menú principal" className="flex flex-col gap-5 p-4">
@@ -46,7 +46,10 @@ function MenuLateral({ onNavegar }) {
                                         }`
                                     }
                                 >
-                                    <Icono nombre={m.icono} className="size-[1.15rem] shrink-0" /> {m.titulo}
+                                    <Icono nombre={m.icono} className="size-[1.15rem] shrink-0" /> <span className="flex-1">{m.titulo}</span>
+                                    {avisos[m.ruta] > 0 && (
+                                        <span className="rounded-full bg-acento px-2 py-0.5 text-xs font-bold text-white" title={`${avisos[m.ruta]} pendiente(s)`}>{avisos[m.ruta]}</span>
+                                    )}
                                 </NavLink>
                             </li>
                         ))}

@@ -17,7 +17,7 @@ class User extends Authenticatable
     protected $table = 'usuarios';
 
     protected $fillable = [
-        'codigo', 'nombre', 'apellido', 'email', 'telefono', 'password', 'rol_id', 'estado', 'preferencias',
+        'codigo', 'nombre', 'apellido', 'email', 'telefono', 'carrera', 'detalle_registro', 'aprobado_por', 'aprobado_en', 'password', 'rol_id', 'estado', 'preferencias',
     ];
 
     protected $hidden = ['password'];
@@ -33,6 +33,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'preferencias' => 'array',
             'ultimo_acceso' => 'datetime',
+            'aprobado_en' => 'datetime',
         ];
     }
 

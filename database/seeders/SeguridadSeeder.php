@@ -38,6 +38,7 @@ class SeguridadSeeder extends Seeder
         ['DOC', 'Docente', 'Solicita reservas, consulta disponibilidad y reporta incidencias', false],
         ['AUX', 'Auxiliar', 'Atiende los laboratorios en su turno, registra asistencia, incidencias y objetos', false],
         ['DIR', 'Director de Carrera', 'Solicita reservas para eventos y consulta estadísticas', false],
+        ['EST', 'Estudiante FICCT', 'Estudiante de la FICCT (ej: auxiliar de cátedra) que solicita reservas de laboratorio', false],
     ];
 
     /** Permisos por rol de negocio (el ADM recibe todos) */
@@ -51,6 +52,8 @@ class SeguridadSeeder extends Seeder
         'AUX' => ['laboratorios.ver', 'horarios.ver', 'disponibilidad.ver', 'reservas.ver', 'reservas.crear', 'reservas.cancelar',
             'equipos.ver', 'incidencias.ver', 'incidencias.crear', 'objetos.*', 'turnos.ver', 'asistencia.ver',
             'asistencia.marcar', 'pagos.ver', 'pagos.pagar'],
+        // Se registra solo desde el login; el Encargado aprueba la cuenta
+        'EST' => ['laboratorios.ver', 'disponibilidad.ver', 'reservas.ver', 'reservas.crear', 'reservas.cancelar'],
         'DIR' => ['dashboard.ver', 'laboratorios.ver', 'horarios.ver', 'disponibilidad.ver', 'reservas.ver', 'reservas.ver_todas',
             'reservas.crear', 'reservas.cancelar', 'equipos.ver', 'incidencias.ver', 'pagos.ver', 'pagos.pagar', 'pagos.ver_todos'],
     ];

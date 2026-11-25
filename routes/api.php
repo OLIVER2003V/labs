@@ -46,6 +46,7 @@ function crud(string $uri, string $controlador, string $recurso, array $permisos
 
 // ---------- Rutas públicas ----------
 Route::post('login', [AuthController::class, 'login'])->middleware('throttle:login'); // máx. 5 intentos por minuto (AppServiceProvider)
+Route::post('registro', [AuthController::class, 'registro'])->middleware('throttle:registro'); // solicitud de cuenta de estudiante
 Route::post('visitas', [GeneralController::class, 'visita'])->middleware('throttle:visitas');
 // Aviso de PagoFácil cuando se paga un QR (sin token: lo llama la pasarela)
 Route::post('pagos/pagofacil/callback', [PagoQrController::class, 'callback'])->middleware('throttle:60,1');
@@ -66,6 +67,8 @@ Route::middleware(['auth:sanctum', 'bitacora'])->group(function () {
 
     // Administración
     crud('usuarios', UsuarioController::class, 'usuarios');
+    Route::put('usuarios/{id}/aprobar', [UsuarioController::class, 'aprobar'])->whereNumber('id')->middleware('permiso:usuarios.editar');
+    Route::put('usuarios/{id}/rechazar', [UsuarioController::class, 'rechazar'])->whereNumber('id')->middleware('permiso:usuarios.editar');
     Route::put('usuarios/{id}/restaurar', [UsuarioController::class, 'restaurar'])->whereNumber('id')->middleware('permiso:usuarios.eliminar');
     Route::get('roles', [RolController::class, 'matriz'])->middleware('permiso:roles.ver');
     Route::post('roles', [RolController::class, 'store'])->middleware('permiso:roles.editar');

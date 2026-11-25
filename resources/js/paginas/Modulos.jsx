@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { HandHelping, Lock, PlayCircle, RotateCcw } from 'lucide-react';
+import { Check, HandHelping, Lock, PlayCircle, RotateCcw, X } from 'lucide-react';
 import CrudPage from '../componentes/CrudPage';
-import { Badge, Formulario, Modal, useToast } from '../componentes/ui';
+import { Badge, Confirmar, Formulario, Modal, useToast } from '../componentes/ui';
 import api, { erroresCampos, mensajeError } from '../lib/api';
 import { P, validar } from '../lib/validar';
 import { bs, DIAS, fecha, fechaHora, hora } from '../lib/formato';
@@ -323,6 +323,40 @@ export const Turnos = () => (
 );
 
 // ----------------------------------------------------------------- Usuarios
+/** Aprobar o rechazar una solicitud de cuenta de estudiante (estado PENDIENTE) */
+function AccionesSolicitud({ fila, recargar }) {
+    const { puede, refrescar } = useAuth();
+    const notificar = useToast();
+    const [rechazar, setRechazar] = useState(false);
+    if (fila.estado !== 'PENDIENTE' || !puede('usuarios.editar')) return null;
+    const ejecutar = async (accion) => {
+        try {
+            notificar((await api.put(`/usuarios/${fila.id}/${accion}`)).data.message);
+            recargar();
+            refrescar(); // actualiza el número de pendientes del menú
+        } catch (e) {
+            notificar(mensajeError(e), 'error');
+        }
+    };
+    return (
+        <>
+            <button className="btn btn-fantasma btn-sm text-exito" onClick={() => ejecutar('aprobar')}><Check className="size-4" aria-hidden /> Aprobar</button>
+            <button className="btn btn-fantasma btn-sm text-peligro" onClick={() => setRechazar(true)}><X className="size-4" aria-hidden /> Rechazar</button>
+            <Confirmar
+                abierto={rechazar}
+                titulo="Rechazar solicitud"
+                mensaje={`Se eliminará la solicitud de ${fila.nombre_completo} (${fila.email}). Podrá volver a registrarse con datos correctos.`}
+                textoBoton="Rechazar"
+                onCerrar={() => setRechazar(false)}
+                onConfirmar={async () => {
+                    await ejecutar('rechazar');
+                    setRechazar(false);
+                }}
+            />
+        </>
+    );
+}
+
 function BotonRestaurarUsuario({ fila, recargar }) {
     const { puede } = useAuth();
     const notificar = useToast();
@@ -353,15 +387,18 @@ export const Usuarios = () => (
         permisos={permisosDe('usuarios')}
         inicial={{ estado: 'ACTIVO' }}
         filtros={[
-            { name: 'estado', label: 'Estado', opciones: ['ACTIVO', 'INACTIVO'] },
+            { name: 'estado', label: 'Estado', opciones: ['PENDIENTE', 'ACTIVO', 'INACTIVO'] },
             { name: 'eliminados', label: 'Registros', textoTodos: 'Usuarios vigentes', opciones: [{ value: 1, label: 'Usuarios eliminados' }] },
         ]}
-        acciones={(fila, recargar) => <BotonRestaurarUsuario fila={fila} recargar={recargar} />}
+        acciones={(fila, recargar) => <><AccionesSolicitud fila={fila} recargar={recargar} /><BotonRestaurarUsuario fila={fila} recargar={recargar} /></>}
         columnas={[
             { key: 'codigo', label: 'Código' },
             { key: 'nombre', label: 'Nombre', render: (f) => <><strong>{f.nombre_completo}</strong><span className="block text-xs text-suave">{f.email}</span></> },
             { key: 'telefono', label: 'Teléfono' },
-            { key: 'rol', label: 'Rol', render: (f) => f.rol?.nombre },
+            {
+                key: 'rol', label: 'Rol',
+                render: (f) => <>{f.rol?.nombre}{f.carrera && <span className="block text-xs text-suave">{f.carrera}</span>}{f.estado === 'PENDIENTE' && f.detalle_registro && <span className="mt-1 block max-w-64 text-xs italic text-suave">“{f.detalle_registro}”</span>}</>,
+            },
             { key: 'ultimo_acceso', label: 'Último acceso', render: (f) => fechaHora(f.ultimo_acceso) },
             { key: 'estado', label: 'Estado', render: (f) => (f.deleted_at ? <Badge valor="BAJA">Eliminado</Badge> : <Badge valor={f.estado} />) },
         ]}

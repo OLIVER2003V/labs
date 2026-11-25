@@ -72,7 +72,7 @@ class GeneralController extends Controller
     public function visita(Request $request): JsonResponse
     {
         // Solo se cuentan páginas reales del sistema (las del menú + login/perfil), para que no se llene la tabla de basura
-        $rutas = cache()->remember('rutas_validas', 300, fn () => DB::table('menus')->pluck('ruta')->merge(['/', '/login', '/perfil'])->unique()->all());
+        $rutas = cache()->remember('rutas_validas', 300, fn () => DB::table('menus')->pluck('ruta')->merge(['/', '/login', '/registro', '/perfil'])->unique()->all());
         $d = $request->validate(['ruta' => ['required', 'string', 'max:150', Rule::in($rutas)]], ['ruta.in' => 'Página no registrada.']);
         $total = DB::selectOne('SELECT registrar_visita(?) AS total', [$d['ruta']])->total;
 

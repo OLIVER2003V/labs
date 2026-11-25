@@ -29,6 +29,9 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('login', fn (Request $r) => Limit::perMinute(5)
             ->by('login|'.strtolower((string) $r->input('email')).'|'.$r->ip()));
 
+        // Registro público: máximo 3 solicitudes por hora por IP (evita cuentas basura)
+        RateLimiter::for('registro', fn (Request $r) => Limit::perHour(3)->by('registro|'.$r->ip()));
+
         RateLimiter::for('visitas', fn (Request $r) => Limit::perMinute(120)->by('visitas|'.$r->ip()));
 
         // "php artisan serve" en PowerShell (Windows): Laravel solo pasa al servidor la variable "SYSTEMROOT"

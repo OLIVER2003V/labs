@@ -11,12 +11,14 @@ export function AuthProvider({ children }) {
     const [usuario, setUsuario] = useState(null);
     const [permisos, setPermisos] = useState([]);
     const [menu, setMenu] = useState([]);
+    const [avisos, setAvisos] = useState({}); // { '/usuarios': 3 } → número en el menú
     const [cargando, setCargando] = useState(true);
 
     const aplicar = (d) => {
         setUsuario(d.usuario);
         setPermisos(d.permisos);
         setMenu(d.menu);
+        setAvisos(d.avisos ?? {});
     };
 
     const limpiar = useCallback(() => {
@@ -59,7 +61,7 @@ export function AuthProvider({ children }) {
     const puede = useCallback((p) => permisos.includes(p), [permisos]);
 
     return (
-        <AuthContext.Provider value={{ usuario, permisos, menu, cargando, login, logout, refrescar, puede, setUsuario }}>
+        <AuthContext.Provider value={{ usuario, permisos, menu, avisos, cargando, login, logout, refrescar, puede, setUsuario }}>
             {children}
         </AuthContext.Provider>
     );

@@ -39,7 +39,8 @@ class UsuarioController extends CrudController
             'email' => ['required', 'email', 'max:100', Rule::unique('usuarios', 'email')->ignore($registro?->id)],
             'telefono' => ['nullable', 'regex:/^[67]\d{7}$/'],
             'rol_id' => ['required', 'integer', 'exists:roles,id'],
-            'estado' => ['required', Rule::in(['ACTIVO', 'INACTIVO'])],
+            'estado' => ['required', Rule::in(['ACTIVO', 'INACTIVO'])], // PENDIENTE solo nace del registro público
+            'carrera' => ['nullable', 'string', 'max:80'],
             // obligatoria al crear, opcional al editar (si viene vacía no se cambia)
             'password' => [$registro ? 'nullable' : 'required', Password::min(8)->letters()->numbers()],
         ];
@@ -75,6 +76,27 @@ class UsuarioController extends CrudController
         $this->protegerSistema($request, $registro);
         abort_if($registro->id === $request->user()->id, 422, 'No puede eliminar su propia cuenta.');
         $registro->tokens()->delete(); // cierra sus sesiones abiertas
+    }
+
+    /** PUT /api/usuarios/{id}/aprobar → activa una solicitud de registro */
+    public function aprobar(Request $request, int $id): JsonResponse
+    {
+        $u = User::findOrFail($id);
+        abort_if($u->estado !== 'PENDIENTE', 422, 'Esta cuenta no está pendiente de aprobación.');
+        $u->forceFill(['estado' => 'ACTIVO', 'aprobado_por' => $request->user()->id, 'aprobado_en' => now()])->save();
+
+        return response()->json(['message' => "Cuenta de {$u->nombre_completo} aprobada. Ya puede iniciar sesión.", 'data' => $u->load('rol')]);
+    }
+
+    /** PUT /api/usuarios/{id}/rechazar → elimina la solicitud (libera el correo y el registro para un nuevo intento) */
+    public function rechazar(int $id): JsonResponse
+    {
+        $u = User::findOrFail($id);
+        abort_if($u->estado !== 'PENDIENTE', 422, 'Solo se pueden rechazar solicitudes pendientes.');
+        $nombre = $u->nombre_completo;
+        $u->forceDelete(); // la auditoría (trigger) conserva los datos de la solicitud rechazada
+
+        return response()->json(['message' => "Solicitud de {$nombre} rechazada."]);
     }
 
     /** PUT /api/usuarios/{id}/restaurar  → deshace el borrado lógico */

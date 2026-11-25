@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Bitacora;
 use App\Models\Menu;
+use App\Models\Rol;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -29,12 +30,16 @@ class AuthController extends Controller
         $motivo = match (true) {
             ! $usuario => 'Usuario no registrado',
             ! Hash::check($datos['password'], $usuario->password) => 'Contraseña incorrecta',
+            $usuario->estado === 'PENDIENTE' => 'Cuenta pendiente de aprobación',
             $usuario->estado !== 'ACTIVO' => 'Cuenta inactiva',
             default => null,
         };
 
         $this->registrar($request, $motivo ? 'LOGIN_FALLIDO' : 'LOGIN_OK', $usuario, $datos['email'], $motivo);
 
+        if ($motivo === 'Cuenta pendiente de aprobación') {
+            return response()->json(['message' => 'Su solicitud de cuenta aún no fue aprobada. El Encargado de Laboratorios la revisará pronto.'], 403);
+        }
         if ($motivo === 'Cuenta inactiva') {
             return response()->json(['message' => 'Su cuenta está inactiva. Contacte al administrador.'], 403);
         }
@@ -47,6 +52,45 @@ class AuthController extends Controller
         $token = $usuario->createToken('spa', ['*'], now()->addHours(8))->plainTextToken;
 
         return response()->json(['token' => $token] + $this->perfilCompleto($usuario));
+    }
+
+    /** Carreras de la FICCT para el formulario de registro */
+    const CARRERAS = ['Ingeniería Informática', 'Ingeniería de Sistemas', 'Ingeniería en Redes y Telecomunicaciones', 'Ingeniería en Robótica'];
+
+    /**
+     * Registro público de estudiantes de la FICCT (ej: auxiliares de cátedra).
+     * La cuenta queda PENDIENTE hasta que el Encargado la apruebe (no puede iniciar sesión antes).
+     */
+    public function registro(Request $request): JsonResponse
+    {
+        $d = $request->validate([
+            'codigo' => ['required', 'regex:/^\d{6,12}$/', Rule::unique('usuarios', 'codigo')],
+            'nombre' => ['required', 'string', 'min:2', 'max:60', 'regex:/^[\pL\s]+$/u'],
+            'apellido' => ['required', 'string', 'min:2', 'max:60', 'regex:/^[\pL\s]+$/u'],
+            'email' => ['required', 'email', 'max:100', Rule::unique('usuarios', 'email')],
+            'telefono' => ['required', 'regex:/^[67]\d{7}$/'],
+            'carrera' => ['required', Rule::in(self::CARRERAS)],
+            'detalle_registro' => ['required', 'string', 'min:10', 'max:300'],
+            'password' => ['required', 'confirmed', Password::min(8)->letters()->numbers()],
+        ], [
+            'codigo.regex' => 'El registro universitario debe tener solo números (entre 6 y 12 dígitos).',
+            'codigo.unique' => 'Ese registro universitario ya tiene una cuenta o una solicitud pendiente.',
+            'email.unique' => 'Ese correo ya tiene una cuenta o una solicitud pendiente.',
+            'telefono.regex' => 'El teléfono debe tener 8 dígitos y empezar con 6 o 7.',
+            'detalle_registro.min' => 'Cuéntenos en al menos 10 caracteres para qué necesita los laboratorios.',
+        ]);
+
+        $usuario = User::create([
+            'codigo' => $d['codigo'], 'nombre' => $d['nombre'], 'apellido' => $d['apellido'],
+            'email' => strtolower($d['email']), 'telefono' => $d['telefono'], 'carrera' => $d['carrera'],
+            'detalle_registro' => $d['detalle_registro'], 'password' => $d['password'],
+            'rol_id' => Rol::where('codigo', 'EST')->value('id'), 'estado' => 'PENDIENTE',
+        ]);
+        $this->registrar($request, 'REGISTRO', $usuario, $usuario->email, 'Solicitud de cuenta de estudiante');
+
+        return response()->json([
+            'message' => 'Solicitud enviada. Podrá iniciar sesión cuando el Encargado de Laboratorios apruebe su cuenta.',
+        ], 201);
     }
 
     public function logout(Request $request): JsonResponse
@@ -114,7 +158,12 @@ class AuthController extends Controller
             ->orderBy('orden')
             ->get(['grupo', 'titulo', 'ruta', 'icono', 'permiso_codigo']);
 
-        return ['usuario' => $usuario, 'permisos' => $permisos, 'menu' => $menu];
+        // Avisos para el menú: solicitudes de cuenta esperando aprobación (solo para quien puede aprobarlas)
+        $avisos = in_array('usuarios.editar', $permisos, true)
+            ? ['/usuarios' => User::where('estado', 'PENDIENTE')->count()]
+            : [];
+
+        return ['usuario' => $usuario, 'permisos' => $permisos, 'menu' => $menu, 'avisos' => $avisos];
     }
 
     private function registrar(Request $request, string $evento, ?User $usuario, string $email, ?string $detalle): void
