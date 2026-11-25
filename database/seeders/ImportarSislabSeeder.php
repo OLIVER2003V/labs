@@ -97,6 +97,8 @@ class ImportarSislabSeeder extends Seeder
             'reserva_id' => $n->reserva_id, 'leida_en' => $n->enviado_en, 'created_at' => $n->enviado_en,
         ]));
 
+        self::importarPermutasYMensajes();
+
         // Bitácora del proyecto 1: cada comando recibido por correo se registra como un acceso
         $emails = DB::table('usuarios')->pluck('id', 'email');
         $this->lote('bitacora', $s('bitacora')->orderBy('id')->get()->map(fn ($b) => [
@@ -119,6 +121,53 @@ class ImportarSislabSeeder extends Seeder
         ]);
 
         $this->command?->info('Importados desde '.$o.': '.collect(self::DESTINO)->map(fn ($t) => "$t=".DB::table($t)->count())->implode(', '));
+    }
+
+    /**
+     * CU5: permutas y chat del proyecto 1 (también lo llama la migración 000012 en una base ya importada).
+     * Solo se copian filas cuyos usuarios y turnos existen; no hace nada si las tablas ya tienen datos.
+     */
+    public static function importarPermutasYMensajes(): void
+    {
+        $o = config('database.origen_sislab', 'sislab');
+        $usuarios = DB::table('usuarios')->pluck('id')->flip();
+        $turnos = DB::table('turnos')->pluck('id')->flip();
+
+        if (! DB::table('permutas')->exists()) {
+            DB::statement('ALTER TABLE permutas DISABLE TRIGGER USER'); // no auditar la importación
+            $filas = DB::table("$o.permuta")->orderBy('id')->get()
+                ->filter(fn ($p) => isset($turnos[$p->turno_id], $usuarios[$p->solicitante_id], $usuarios[$p->reemplazante_id]))
+                ->map(fn ($p) => [
+                    'id' => $p->id, 'turno_id' => $p->turno_id, 'solicitante_id' => $p->solicitante_id, 'reemplazante_id' => $p->reemplazante_id,
+                    'fecha' => $p->fecha, 'estado' => $p->estado, 'motivo' => 'Registrada en el proyecto 1 (vía mail)',
+                    'aprobado_por' => isset($usuarios[$p->aprobado_por]) ? $p->aprobado_por : null,
+                    'created_at' => $p->creado_en, 'updated_at' => $p->creado_en,
+                ]);
+            // Si dos permutas en curso piden el mismo turno y fecha, se conserva la primera (índice único)
+            $vistas = [];
+            $filas = $filas->filter(function ($p) use (&$vistas) {
+                if (! in_array($p['estado'], ['PENDIENTE', 'ACEPTADA', 'APROBADA'], true)) {
+                    return true;
+                }
+                $clave = $p['turno_id'].'|'.$p['fecha'];
+
+                return isset($vistas[$clave]) ? false : ($vistas[$clave] = true);
+            });
+            DB::table('permutas')->insert($filas->values()->all());
+            DB::statement("SELECT setval(pg_get_serial_sequence('permutas', 'id'), COALESCE((SELECT MAX(id) FROM permutas), 1), (SELECT COUNT(*) > 0 FROM permutas))");
+            DB::statement('ALTER TABLE permutas ENABLE TRIGGER USER');
+        }
+
+        if (! DB::table('mensajes')->exists()) {
+            DB::table('mensajes')->insert(DB::table("$o.mensaje")->orderBy('id')->get()
+                ->filter(fn ($m) => isset($usuarios[$m->remitente_id], $usuarios[$m->destinatario_id]) && $m->remitente_id !== $m->destinatario_id)
+                ->map(fn ($m) => [
+                    'id' => $m->id, 'remitente_id' => $m->remitente_id, 'destinatario_id' => $m->destinatario_id,
+                    'contenido' => mb_substr(trim((string) $m->contenido), 0, 1000), 'leido_en' => $m->leido ? $m->enviado_en : null,
+                    'created_at' => $m->enviado_en,
+                ])->values()->all());
+            DB::statement("SELECT setval(pg_get_serial_sequence('mensajes', 'id'), COALESCE((SELECT MAX(id) FROM mensajes), 1), (SELECT COUNT(*) > 0 FROM mensajes))");
+        }
     }
 
     private function lote(string $tabla, $filas): void

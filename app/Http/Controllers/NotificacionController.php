@@ -20,6 +20,7 @@ class NotificacionController extends Controller
             'no_leidas' => DB::table('notificaciones')->where('usuario_id', $id)->whereNull('leida_en')->count(),
             'data' => DB::table('notificaciones')->where('usuario_id', $id)->orderByDesc('id')->limit(30)
                 ->get(['id', 'titulo', 'mensaje', 'url', 'leida_en', 'created_at']),
+            'avisos' => AuthController::avisos($request->user()), // números del menú (mensajes sin leer, permutas por responder…)
         ]);
     }
 

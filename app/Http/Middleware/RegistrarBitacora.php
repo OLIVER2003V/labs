@@ -16,6 +16,8 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class RegistrarBitacora
 {
+    const CONSULTAS_AUTOMATICAS = ['notificaciones', 'mensajes'];
+
     public function handle(Request $request, Closure $next): Response
     {
         $usuario = $request->user();
@@ -32,7 +34,11 @@ class RegistrarBitacora
 
         $response = $next($request);
 
-        if ($usuario && $response->getStatusCode() !== 403) { // los 403 ya los registra VerificarPermiso
+        // Las consultas automáticas que la pantalla repite sola (campanita cada 60 s, chat cada 5 s) no son accesos del usuario:
+        // si se registraran, llenarían la bitácora. Enviar un mensaje (POST) sí se registra.
+        $automatica = $request->isMethod('GET') && in_array(self::recurso($request), self::CONSULTAS_AUTOMATICAS, true);
+
+        if ($usuario && $response->getStatusCode() !== 403 && ! $automatica) { // los 403 ya los registra VerificarPermiso
             Bitacora::create([
                 'usuario_id' => $usuario->id,
                 'email' => $usuario->email,

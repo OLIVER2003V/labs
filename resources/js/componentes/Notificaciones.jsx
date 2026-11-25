@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bell, CheckCheck } from 'lucide-react';
 import api from '../lib/api';
+import { useAuth } from '../contexto/AuthContext';
 
 /** "hace 5 min", "hace 2 h", "hace 3 d" */
 function hace(fecha) {
@@ -22,10 +23,15 @@ export default function Notificaciones() {
     const [abierto, setAbierto] = useState(false);
     const ref = useRef(null);
     const navegar = useNavigate();
+    const { setAvisos } = useAuth();
 
+    // La misma consulta trae los números del menú: así se actualizan solos cada 60 s
     const cargar = useCallback(() => {
-        api.get('/notificaciones').then((r) => setDatos(r.data)).catch(() => {});
-    }, []);
+        api.get('/notificaciones').then((r) => {
+            setDatos(r.data);
+            if (r.data.avisos) setAvisos(r.data.avisos);
+        }).catch(() => {});
+    }, [setAvisos]);
 
     useEffect(() => {
         cargar();

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Asistencia;
+use App\Models\Permuta;
 use App\Models\Semestre;
 use App\Models\Turno;
 use Carbon\Carbon;
@@ -13,6 +14,7 @@ use Illuminate\Validation\Rule;
 /**
  * CU7 - Asistencia de auxiliares.
  * Entrada: se permite desde 15 min antes del turno; hasta 10 min después = PUNTUAL, luego ATRASO.
+ * CU5: si el turno tiene una permuta APROBADA para ese día, la asistencia la marca (y la falta se le cuenta a) el reemplazante.
  */
 class AsistenciaController extends Controller
 {
@@ -40,7 +42,7 @@ class AsistenciaController extends Controller
         return response()->json($q->paginate($this->porPagina($request, 10)));
     }
 
-    /** Turno del auxiliar para hoy en el que cae la hora actual (con anticipación) */
+    /** Turno que el auxiliar debe atender ahora: los suyos que no cedió hoy + los que cubre hoy por permuta aprobada */
     private function turnoVigente(int $auxiliarId, Carbon $ahora): ?Turno
     {
         $semestre = Semestre::activo();
@@ -50,8 +52,12 @@ class AsistenciaController extends Controller
         $hora = $ahora->format('H:i:s');
         $limite = $ahora->copy()->addMinutes(self::ANTICIPACION_MIN)->format('H:i:s');
 
+        $aprobadasHoy = Permuta::whereDate('fecha', $ahora->toDateString())->where('estado', 'APROBADA');
+        $cedidos = (clone $aprobadasHoy)->where('solicitante_id', $auxiliarId)->pluck('turno_id');
+        $cubre = (clone $aprobadasHoy)->where('reemplazante_id', $auxiliarId)->pluck('turno_id');
+
         return Turno::where('semestre_id', $semestre->id)
-            ->where('auxiliar_id', $auxiliarId)
+            ->where(fn ($q) => $q->where(fn ($x) => $x->where('auxiliar_id', $auxiliarId)->whereNotIn('id', $cedidos))->orWhereIn('id', $cubre))
             ->where('dia_semana', $ahora->dayOfWeekIso)
             ->where('hora_inicio', '<=', $limite)
             ->where('hora_fin', '>', $hora)
@@ -111,7 +117,7 @@ class AsistenciaController extends Controller
 
         $asistencia = Asistencia::updateOrCreate(
             ['turno_id' => $turno->id, 'fecha' => $d['fecha']],
-            ['auxiliar_id' => $turno->auxiliar_id, 'estado' => 'PERMISO', 'observacion' => $d['observacion']]
+            ['auxiliar_id' => Permuta::responsable($turno, $d['fecha']), 'estado' => 'PERMISO', 'observacion' => $d['observacion']]
         );
 
         return response()->json(['message' => 'Permiso registrado.', 'data' => $asistencia], 201);
@@ -133,7 +139,7 @@ class AsistenciaController extends Controller
         foreach ($turnos as $t) {
             $creada = Asistencia::firstOrCreate(
                 ['turno_id' => $t->id, 'fecha' => $fecha->toDateString()],
-                ['auxiliar_id' => $t->auxiliar_id, 'estado' => 'FALTA', 'observacion' => 'Sin registro de entrada']
+                ['auxiliar_id' => Permuta::responsable($t, $fecha->toDateString()), 'estado' => 'FALTA', 'observacion' => 'Sin registro de entrada']
             );
             $n += $creada->wasRecentlyCreated ? 1 : 0;
         }

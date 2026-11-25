@@ -21,6 +21,11 @@ export function AuthProvider({ children }) {
         setAvisos(d.avisos ?? {});
     };
 
+    // Vuelve a pedir los números del menú (mensajes sin leer, permutas por responder…)
+    const refrescarAvisos = useCallback(() => {
+        api.get('/notificaciones').then((r) => setAvisos(r.data.avisos ?? {})).catch(() => {});
+    }, []);
+
     const limpiar = useCallback(() => {
         localStorage.removeItem('token');
         setUsuario(null);
@@ -61,7 +66,7 @@ export function AuthProvider({ children }) {
     const puede = useCallback((p) => permisos.includes(p), [permisos]);
 
     return (
-        <AuthContext.Provider value={{ usuario, permisos, menu, avisos, cargando, login, logout, refrescar, puede, setUsuario }}>
+        <AuthContext.Provider value={{ usuario, permisos, menu, avisos, setAvisos, refrescarAvisos, cargando, login, logout, refrescar, puede, setUsuario }}>
             {children}
         </AuthContext.Provider>
     );

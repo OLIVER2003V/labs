@@ -16,7 +16,7 @@ class Triggers
     /** Tablas con auditoría automática (INSERT / UPDATE / DELETE) */
     const AUDITADAS = [
         'usuarios', 'roles', 'rol_permiso', 'laboratorios', 'semestres', 'materias', 'horarios',
-        'reservas', 'equipos', 'incidencias', 'objetos_encontrados', 'turnos', 'asistencias',
+        'reservas', 'equipos', 'incidencias', 'objetos_encontrados', 'turnos', 'asistencias', 'permutas',
         'conceptos_pago', 'planes_pago', 'cuotas', 'transacciones', 'metodos_pago',
     ];
 
@@ -75,6 +75,9 @@ $$ LANGUAGE plpgsql SET search_path FROM CURRENT;
 SQL);
 
         foreach (self::AUDITADAS as $tabla) {
+            if (! DB::selectOne('SELECT to_regclass(?) AS t', [$tabla])->t) {
+                continue; // la tabla la crea una migración posterior, que vuelve a llamar a instalar()
+            }
             DB::unprepared("DROP TRIGGER IF EXISTS tg_auditoria_{$tabla} ON {$tabla};
                 CREATE TRIGGER tg_auditoria_{$tabla} AFTER INSERT OR UPDATE OR DELETE ON {$tabla}
                 FOR EACH ROW EXECUTE FUNCTION fn_auditoria();");

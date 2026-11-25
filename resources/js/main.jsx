@@ -16,6 +16,8 @@ import { Auditoria, Bitacora } from './paginas/Bitacora';
 import Asistencia from './paginas/Asistencia';
 import { MetodosPago, MisPagos, PlanesPago } from './paginas/Pagos';
 import Perfil from './paginas/Perfil';
+import Permutas from './paginas/Permutas';
+import Mensajes from './paginas/Mensajes';
 import {
     Conceptos, Equipos, FechasBloqueadas, Horarios, Incidencias, Laboratorios, Materias, Objetos, Semestres, Turnos, Usuarios,
 } from './paginas/Modulos';
@@ -45,6 +47,8 @@ function App() {
         ['/objetos', Objetos, 'objetos.ver'],
         ['/turnos', Turnos, 'turnos.ver'],
         ['/asistencia', Asistencia, 'asistencia.ver'],
+        ['/permutas', Permutas, 'permutas.ver'],
+        ['/mensajes', Mensajes, 'mensajes.usar'],
         ['/pagos', MisPagos, 'pagos.ver'],
         ['/pagos/metodos', MetodosPago, 'pagos.pagar'],
         ['/pagos/planes', PlanesPago, 'planes.gestionar'],

@@ -12,10 +12,12 @@ use App\Http\Controllers\HorarioController;
 use App\Http\Controllers\IncidenciaController;
 use App\Http\Controllers\LaboratorioController;
 use App\Http\Controllers\MateriaController;
+use App\Http\Controllers\MensajeController;
 use App\Http\Controllers\NotificacionController;
 use App\Http\Controllers\ObjetoEncontradoController;
 use App\Http\Controllers\PagoController;
 use App\Http\Controllers\PagoQrController;
+use App\Http\Controllers\PermutaController;
 use App\Http\Controllers\ReservaController;
 use App\Http\Controllers\RolController;
 use App\Http\Controllers\SemestreController;
@@ -115,6 +117,21 @@ Route::middleware(['auth:sanctum', 'bitacora'])->group(function () {
 
     // Auxiliares: turnos y asistencia
     crud('turnos', TurnoController::class, 'turnos', ['editar' => 'turnos.crear', 'eliminar' => 'turnos.crear']);
+    // CU5 - Permutas de turno (solicitar → el reemplazante acepta → el Encargado aprueba) y chat interno
+    Route::get('permutas', [PermutaController::class, 'index'])->middleware('permiso:permutas.ver');
+    Route::get('permutas/{id}', [PermutaController::class, 'show'])->whereNumber('id')->middleware('permiso:permutas.ver');
+    Route::post('permutas', [PermutaController::class, 'store'])->middleware('permiso:permutas.solicitar');
+    Route::put('permutas/{id}/responder', [PermutaController::class, 'responder'])->middleware('permiso:permutas.solicitar');
+    Route::put('permutas/{id}/aprobar', [PermutaController::class, 'aprobar'])->middleware('permiso:permutas.aprobar');
+    Route::put('permutas/{id}/rechazar', [PermutaController::class, 'rechazar'])->middleware('permiso:permutas.aprobar');
+    Route::put('permutas/{id}/cancelar', [PermutaController::class, 'cancelar'])->middleware('permiso:permutas.ver');
+    Route::middleware('permiso:mensajes.usar')->group(function () {
+        Route::get('mensajes', [MensajeController::class, 'conversaciones']);
+        Route::get('mensajes/contactos', [MensajeController::class, 'contactos']);
+        Route::get('mensajes/{usuario}', [MensajeController::class, 'conversacion'])->whereNumber('usuario');
+        Route::post('mensajes', [MensajeController::class, 'enviar'])->middleware('throttle:30,1'); // máx. 30 mensajes por minuto
+    });
+
     Route::get('asistencias', [AsistenciaController::class, 'index'])->middleware('permiso:asistencia.ver');
     Route::post('asistencias/entrada', [AsistenciaController::class, 'marcarEntrada'])->middleware('permiso:asistencia.marcar');
     Route::post('asistencias/salida', [AsistenciaController::class, 'marcarSalida'])->middleware('permiso:asistencia.marcar');

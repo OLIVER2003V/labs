@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Bitacora;
 use App\Models\Menu;
+use App\Models\Mensaje;
+use App\Models\Permuta;
 use App\Models\Rol;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
@@ -158,12 +160,31 @@ class AuthController extends Controller
             ->orderBy('orden')
             ->get(['grupo', 'titulo', 'ruta', 'icono', 'permiso_codigo']);
 
-        // Avisos para el menú: solicitudes de cuenta esperando aprobación (solo para quien puede aprobarlas)
-        $avisos = in_array('usuarios.editar', $permisos, true)
-            ? ['/usuarios' => User::where('estado', 'PENDIENTE')->count()]
-            : [];
+        return ['usuario' => $usuario, 'permisos' => $permisos, 'menu' => $menu, 'avisos' => self::avisos($usuario, $permisos)];
+    }
 
-        return ['usuario' => $usuario, 'permisos' => $permisos, 'menu' => $menu, 'avisos' => $avisos];
+    /**
+     * Números que aparecen junto a una opción del menú ("cosas que esperan algo de mí").
+     * También los devuelve GET /api/notificaciones, así se actualizan solos cada 60 s.
+     */
+    public static function avisos(User $usuario, ?array $permisos = null): array
+    {
+        $permisos ??= $usuario->permisos();
+        $avisos = [];
+        if (in_array('usuarios.editar', $permisos, true)) {      // solicitudes de cuenta por aprobar
+            $avisos['/usuarios'] = User::where('estado', 'PENDIENTE')->count();
+        }
+        if (in_array('mensajes.usar', $permisos, true)) {        // mensajes sin leer
+            $avisos['/mensajes'] = Mensaje::where('destinatario_id', $usuario->id)->whereNull('leido_en')->count();
+        }
+        if (in_array('permutas.ver', $permisos, true)) {         // permutas que esperan mi respuesta o mi aprobación
+            $avisos['/permutas'] = Permuta::whereDate('fecha', '>=', now()->toDateString())
+                ->where(fn ($q) => $q->where(fn ($x) => $x->where('reemplazante_id', $usuario->id)->where('estado', 'PENDIENTE'))
+                    ->when(in_array('permutas.aprobar', $permisos, true), fn ($x) => $x->orWhere('estado', 'ACEPTADA')))
+                ->count();
+        }
+
+        return $avisos;
     }
 
     private function registrar(Request $request, string $evento, ?User $usuario, string $email, ?string $detalle): void

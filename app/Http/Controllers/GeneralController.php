@@ -86,7 +86,7 @@ class GeneralController extends Controller
         $requiere = [
             'usuarios' => ['planes.gestionar', 'usuarios.ver'],
             'roles' => ['usuarios.ver'],
-            'auxiliares' => ['turnos.crear', 'asistencia.gestionar'],
+            'auxiliares' => ['turnos.crear', 'asistencia.gestionar', 'permutas.solicitar'],
             'docentes' => ['horarios.ver'],
             'turnos' => ['asistencia.gestionar'],
         ];
@@ -107,6 +107,12 @@ class GeneralController extends Controller
             'conceptos' => ConceptoPago::where('activo', true)->orderBy('nombre')->get()->map(fn ($c) => ['id' => $c->id, 'label' => "{$c->nombre} - Bs {$c->monto}", 'monto' => $c->monto]),
             'turnos' => Turno::with('auxiliar')->whereHas('semestre', fn ($s) => $s->where('estado', 'ACTIVO'))->orderBy('dia_semana')->get()
                 ->map(fn ($t) => ['id' => $t->id, 'label' => $t->auxiliar->nombre_completo.' · '.['', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'][$t->dia_semana].' '.substr($t->hora_inicio, 0, 5).'-'.substr($t->hora_fin, 0, 5)]),
+            // CU5: los turnos del propio usuario en el semestre activo (para pedir una permuta)
+            'mis_turnos' => Turno::with('laboratorio')->where('auxiliar_id', $request->user()->id)
+                ->whereHas('semestre', fn ($s) => $s->where('estado', 'ACTIVO'))->orderBy('dia_semana')->orderBy('hora_inicio')->get()
+                ->map(fn ($t) => ['id' => $t->id, 'dia_semana' => $t->dia_semana,
+                    'label' => ['', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'][$t->dia_semana].' '.substr($t->hora_inicio, 0, 5).'-'.substr($t->hora_fin, 0, 5)
+                        .' · '.($t->laboratorio?->codigo ?? 'Módulo')]),
             default => abort(404, 'Lista no disponible.'),
         };
 

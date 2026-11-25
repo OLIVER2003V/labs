@@ -15,9 +15,9 @@ class Respaldo
     const TABLAS = [
         'roles', 'permisos', 'rol_permiso', 'menus', 'usuarios', 'personal_access_tokens',
         'laboratorios', 'semestres', 'fechas_bloqueadas', 'materias', 'horarios', 'reservas',
-        'equipos', 'incidencias', 'objetos_encontrados', 'turnos', 'asistencias',
+        'equipos', 'incidencias', 'objetos_encontrados', 'turnos', 'asistencias', 'permutas',
         'conceptos_pago', 'metodos_pago', 'planes_pago', 'cuotas', 'transacciones',
-        'notificaciones', 'bitacora', 'visitas_pagina', 'auditoria',
+        'notificaciones', 'mensajes', 'bitacora', 'visitas_pagina', 'auditoria',
     ];
 
     public static function carpeta(): string
