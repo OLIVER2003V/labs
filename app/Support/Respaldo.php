@@ -4,6 +4,7 @@ namespace App\Support;
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Respaldo y restauración de TODOS los datos en un archivo JSON (storage/app/respaldos).
@@ -29,12 +30,21 @@ class Respaldo
         return $dir;
     }
 
+    /**
+     * Tablas de la lista que existen en esta base. Así el respaldo y la restauración funcionan aunque la base
+     * tenga una versión distinta del código (ej: antes de migrar, cuando las tablas nuevas todavía no existen).
+     */
+    public static function tablasExistentes(): array
+    {
+        return array_values(array_filter(self::TABLAS, fn ($t) => Schema::hasTable($t)));
+    }
+
     /** Crea el respaldo y devuelve [ruta, totalFilas] */
     public static function crear(?string $nombre = null): array
     {
         $datos = ['creado' => now()->toDateTimeString(), 'tablas' => []];
         $total = 0;
-        foreach (self::TABLAS as $tabla) {
+        foreach (self::tablasExistentes() as $tabla) {
             $filas = DB::table($tabla)->get()->map(fn ($f) => (array) $f)->all();
             $datos['tablas'][$tabla] = $filas;
             $total += count($filas);
@@ -65,13 +75,14 @@ class Respaldo
         $datos = json_decode(File::get($ruta), true, 512, JSON_THROW_ON_ERROR);
         $total = 0;
 
-        DB::transaction(function () use ($datos, &$total) {
-            foreach (self::TABLAS as $t) {
+        $tablas = self::tablasExistentes();
+        DB::transaction(function () use ($datos, &$total, $tablas) {
+            foreach ($tablas as $t) {
                 DB::statement("ALTER TABLE {$t} DISABLE TRIGGER USER");
             }
-            DB::statement('TRUNCATE '.implode(', ', self::TABLAS).' RESTART IDENTITY CASCADE');
+            DB::statement('TRUNCATE '.implode(', ', $tablas).' RESTART IDENTITY CASCADE');
 
-            foreach (self::TABLAS as $tabla) {
+            foreach ($tablas as $tabla) {
                 $columnas = DB::getSchemaBuilder()->getColumnListing($tabla);
                 $filas = array_map(
                     fn ($f) => array_intersect_key($f, array_flip($columnas)),
@@ -86,7 +97,7 @@ class Respaldo
                 }
             }
 
-            foreach (self::TABLAS as $t) {
+            foreach ($tablas as $t) {
                 DB::statement("ALTER TABLE {$t} ENABLE TRIGGER USER");
             }
         });
