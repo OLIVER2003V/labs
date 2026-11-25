@@ -16,7 +16,7 @@ class Respaldo
         'roles', 'permisos', 'rol_permiso', 'menus', 'usuarios', 'personal_access_tokens',
         'laboratorios', 'semestres', 'fechas_bloqueadas', 'materias', 'horarios', 'reservas',
         'equipos', 'equipos_red', 'incidencias', 'objetos_encontrados', 'turnos', 'asistencias', 'permisos_auxiliar', 'permutas',
-        'conceptos_pago', 'metodos_pago', 'planes_pago', 'cuotas', 'multas', 'transacciones',
+        'conceptos_pago', 'planes_pago', 'cuotas', 'multas', 'transacciones',
         'notificaciones', 'mensajes', 'bitacora', 'visitas_pagina', 'auditoria',
     ];
 

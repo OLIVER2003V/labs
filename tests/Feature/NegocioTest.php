@@ -2,10 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\Cuota;
 use App\Models\Laboratorio;
-use App\Models\MetodoPago;
-use App\Models\PlanPago;
 use App\Models\Reserva;
 use App\Models\User;
 use App\Services\Disponibilidad;
@@ -107,34 +104,6 @@ class NegocioTest extends SistemaTestCase
         $this->assertNotNull($a);
         $this->assertNull($a->usuario_app_id); // no vino desde la aplicación
         $this->assertStringContainsString('Modificado por SQL', $a->datos_despues);
-    }
-
-    public function test_pago_de_cuota_rechazado_y_luego_aprobado_cierra_el_plan(): void
-    {
-        $docente = $this->como('docente@ficct.edu.bo');
-        $plan = PlanPago::where('usuario_id', $docente->id)->where('estado', 'VIGENTE')->firstOrFail();
-        $cuota = Cuota::where('plan_id', $plan->id)->where('estado', 'PENDIENTE')->orderBy('numero')->firstOrFail();
-        $sinFondos = MetodoPago::where('usuario_id', $docente->id)->where('ultimos4', '0002')->firstOrFail();
-        $visa = MetodoPago::where('usuario_id', $docente->id)->where('ultimos4', '1111')->firstOrFail();
-
-        $this->postJson("/api/pagos/cuotas/{$cuota->id}/pagar", ['metodo_pago_id' => $sinFondos->id])->assertStatus(402);
-        $this->assertSame('PENDIENTE', $cuota->fresh()->estado);
-        $this->assertDatabaseHas('transacciones', ['cuota_id' => $cuota->id, 'estado' => 'RECHAZADA']);
-
-        $this->postJson("/api/pagos/cuotas/{$cuota->id}/pagar", ['metodo_pago_id' => $visa->id])->assertCreated();
-        $this->assertSame('PAGADA', $cuota->fresh()->estado);
-        $this->postJson("/api/pagos/cuotas/{$cuota->id}/pagar", ['metodo_pago_id' => $visa->id])->assertStatus(422); // no se paga dos veces
-        if (! Cuota::where('plan_id', $plan->id)->where('estado', 'PENDIENTE')->exists()) {
-            $this->assertSame('PAGADO', $plan->fresh()->estado); // trigger tg_cuota_cierra_plan
-        }
-    }
-
-    public function test_tarjeta_invalida_se_rechaza_al_registrarla(): void
-    {
-        $this->como('docente@ficct.edu.bo');
-        $this->postJson('/api/pagos/metodos', ['tipo' => 'TARJETA', 'alias' => 'Mala', 'titular' => 'Carla Vaca',
-            'numero_tarjeta' => '4111111111111112', 'vencimiento' => '12/30', 'cvv' => '123'])
-            ->assertStatus(422)->assertJson(['message' => 'El número de tarjeta no es válido.']);
     }
 
     public function test_respaldo_y_restauracion_recuperan_datos_borrados(): void

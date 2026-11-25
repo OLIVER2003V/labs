@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Services\Disponibilidad;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 
 /** CU9 - Multas por atraso, falta y reserva no utilizada; pago por QR; bloqueo por multas vencidas */
 class MultasTest extends SistemaTestCase
@@ -47,17 +48,21 @@ class MultasTest extends SistemaTestCase
         $this->assertSame(['ATRASO', 'PENDIENTE', '10.00'], [$multa->tipo, $multa->estado, $multa->monto]);
         $this->assertSame(Carbon::parse($this->martes)->addDays(7)->toDateString(), $multa->vence_en->toDateString());
 
-        // Pago con QR (pasarela simulada): generar → el "banco" paga → la pantalla consulta → PAGADA
-        $trx = $this->postJson('/api/pagos/qr', ['multa_id' => $multa->id])->assertCreated()->json('data');
+        // Pago con tarjeta en Stripe (API simulada con Http::fake): página de pago → Stripe confirma → PAGADA
+        config(['pagos.stripe.secreta' => 'sk_test_prueba']);
+        Http::fake([
+            'api.stripe.com/v1/checkout/sessions' => Http::response(['id' => 'cs_test_multa', 'url' => 'https://checkout.stripe.com/c/pay/cs_test_multa', 'expires_at' => now()->addMinutes(30)->timestamp]),
+            'api.stripe.com/v1/checkout/sessions/*' => Http::response(['id' => 'cs_test_multa', 'status' => 'complete', 'payment_status' => 'paid', 'payment_intent' => 'pi_test_multa']),
+        ]);
+        $trx = $this->postJson('/api/pagos/stripe', ['multa_id' => $multa->id])->assertCreated()->json('data');
         $this->assertEquals(10, $trx['monto']);
-        $this->postJson("/api/pagos/simulador/{$trx['id']}/pagar")->assertOk();
         $this->getJson("/api/pagos/transacciones/{$trx['id']}/estado")->assertOk()->assertJsonPath('data.estado', 'APROBADA');
         $this->assertSame('PAGADA', $multa->fresh()->estado);
-        $this->postJson('/api/pagos/qr', ['multa_id' => $multa->id])->assertStatus(422); // no se paga dos veces
+        $this->postJson('/api/pagos/stripe', ['multa_id' => $multa->id])->assertStatus(422); // no se paga dos veces
 
         // Otro auxiliar no puede pagar ni ver la multa ajena
         $this->como('vflores@ficct.edu.bo');
-        $this->postJson('/api/pagos/qr', ['multa_id' => $multa->id])->assertForbidden();
+        $this->postJson('/api/pagos/stripe', ['multa_id' => $multa->id])->assertForbidden();
         $this->assertCount(0, $this->getJson('/api/multas')->json('data'));
     }
 

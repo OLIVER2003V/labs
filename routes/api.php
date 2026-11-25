@@ -17,7 +17,7 @@ use App\Http\Controllers\MultaController;
 use App\Http\Controllers\NotificacionController;
 use App\Http\Controllers\ObjetoEncontradoController;
 use App\Http\Controllers\PagoController;
-use App\Http\Controllers\PagoQrController;
+use App\Http\Controllers\PagoStripeController;
 use App\Http\Controllers\PermutaController;
 use App\Http\Controllers\ReporteController;
 use App\Http\Controllers\ReservaController;
@@ -53,8 +53,8 @@ function crud(string $uri, string $controlador, string $recurso, array $permisos
 Route::post('login', [AuthController::class, 'login'])->middleware('throttle:login'); // máx. 5 intentos por minuto (AppServiceProvider)
 Route::post('registro', [AuthController::class, 'registro'])->middleware('throttle:registro'); // solicitud de cuenta de estudiante
 Route::post('visitas', [GeneralController::class, 'visita'])->middleware('throttle:visitas');
-// Aviso de PagoFácil cuando se paga un QR (sin token: lo llama la pasarela)
-Route::post('pagos/pagofacil/callback', [PagoQrController::class, 'callback'])->middleware('throttle:60,1');
+// Aviso de Stripe cuando se completa un pago (sin token: lo llama Stripe; se verifica la firma)
+Route::post('pagos/stripe/webhook', [PagoStripeController::class, 'webhook'])->middleware('throttle:120,1'); // aviso de Stripe (firma verificada)
 Route::get('estado', fn () => ['ok' => true, 'hora' => now()->toDateTimeString()]);
 
 // ---------- Rutas protegidas ----------
@@ -150,25 +150,17 @@ Route::middleware(['auth:sanctum', 'bitacora'])->group(function () {
     Route::post('asistencias/faltas', [AsistenciaController::class, 'marcarFaltas'])->middleware('permiso:asistencia.gestionar');
 
     // Pagos
-    Route::get('pagos/metodos', [PagoController::class, 'metodos'])->middleware('permiso:pagos.ver');
-    Route::post('pagos/metodos', [PagoController::class, 'registrarMetodo'])->middleware('permiso:pagos.pagar');
-    Route::put('pagos/metodos/{id}/predeterminado', [PagoController::class, 'predeterminado'])->middleware('permiso:pagos.pagar');
-    Route::delete('pagos/metodos/{id}', [PagoController::class, 'eliminarMetodo'])->middleware('permiso:pagos.pagar');
     Route::get('pagos/planes', [PagoController::class, 'planes'])->middleware('permiso:pagos.ver');
     Route::post('pagos/planes', [PagoController::class, 'crearPlan'])->middleware('permiso:planes.gestionar');
     Route::put('pagos/planes/{id}/anular', [PagoController::class, 'anularPlan'])->middleware('permiso:planes.gestionar');
-    Route::post('pagos/cuotas/{id}/pagar', [PagoController::class, 'pagarCuota'])->middleware('permiso:pagos.pagar');
-    Route::post('pagos/unico', [PagoController::class, 'pagoUnico'])->middleware('permiso:pagos.pagar');
     Route::get('pagos/transacciones', [PagoController::class, 'transacciones'])->middleware('permiso:pagos.ver');
-    Route::post('pagos/qr', [PagoQrController::class, 'iniciar'])->middleware('permiso:pagos.pagar');
+    Route::post('pagos/stripe', [PagoStripeController::class, 'iniciar'])->middleware('permiso:pagos.pagar'); // cuota, multa o concepto → página de pago de Stripe
 
     // CU9 - Multas (atraso, falta, reserva no utilizada)
     Route::get('multas', [MultaController::class, 'index'])->middleware('permiso:multas.ver');
     Route::get('multas/resumen', [MultaController::class, 'resumen'])->middleware('permiso:multas.ver');
-    Route::post('multas/{id}/pagar', [PagoController::class, 'pagarMulta'])->whereNumber('id')->middleware('permiso:pagos.pagar');
     Route::put('multas/{id}/anular', [MultaController::class, 'anular'])->whereNumber('id')->middleware('permiso:multas.gestionar');
-    Route::get('pagos/transacciones/{id}/estado', [PagoQrController::class, 'estado'])->whereNumber('id')->middleware('permiso:pagos.ver');
-    Route::post('pagos/simulador/{id}/pagar', [PagoQrController::class, 'simularPago'])->whereNumber('id')->middleware('permiso:pagos.pagar');
+    Route::get('pagos/transacciones/{id}/estado', [PagoStripeController::class, 'estado'])->whereNumber('id')->middleware('permiso:pagos.ver');
     crud('conceptos', ConceptoPagoController::class, 'conceptos', ['ver' => 'pagos.ver']);
 });
 

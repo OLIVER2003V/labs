@@ -337,30 +337,6 @@ class DatosSeeder extends Seeder
     {
         $c = self::conceptosDePago();
 
-        // Tarjetas de prueba: 4111 1111 1111 1111 (aprobada), 4000 0000 0000 0002 (siempre rechazada)
-        $metodos = [];
-        $tarjetas = [
-            ['docente@ficct.edu.bo', 'TARJETA', 'Mi Visa', 'VISA', '1111', '12/28'],
-            ['docente@ficct.edu.bo', 'TARJETA', 'Tarjeta sin fondos', 'VISA', '0002', '08/29'],
-            ['auxiliar@ficct.edu.bo', 'BILLETERA', 'Tigo Money', 'BILLETERA', '0001', null],
-            ['director@ficct.edu.bo', 'TARJETA', 'Mastercard institucional', 'MASTERCARD', '4444', '03/29'],
-            ['jsuarez@ficct.edu.bo', 'QR', 'QR Banco Unión', 'QR SIMPLE', null, null],
-            ['panez@ficct.edu.bo', 'TARJETA', 'Visa BNB', 'VISA', '1881', '11/27'],
-            ['vflores@ficct.edu.bo', 'QR', 'QR BCP', 'QR SIMPLE', null, null],
-        ];
-        foreach ($tarjetas as $i => [$email, $tipo, $alias, $marca, $u4, $venc]) {
-            $metodos[$email] ??= DB::table('metodos_pago')->insertGetId([
-                'usuario_id' => $this->u[$email], 'tipo' => $tipo, 'alias' => $alias,
-                'titular' => mb_strtoupper(DB::table('usuarios')->where('id', $this->u[$email])->selectRaw("nombre || ' ' || apellido AS n")->value('n')),
-                'marca' => $marca, 'ultimos4' => $u4, 'vencimiento' => $venc, 'token' => 'tok_'.Str::random(32),
-                'predeterminado' => true,
-            ] + $this->ahora());
-            if ($i === 1) {
-                DB::table('metodos_pago')->insert(['usuario_id' => $this->u[$email], 'tipo' => $tipo, 'alias' => $alias, 'titular' => 'CARLA VACA JUSTINIANO',
-                    'marca' => $marca, 'ultimos4' => $u4, 'vencimiento' => $venc, 'token' => 'tok_'.Str::random(32), 'predeterminado' => false] + $this->ahora());
-            }
-        }
-
         $planes = [
             ['docente@ficct.edu.bo', 'MULTA-DANO', 'Multa por daño de proyector PRY-43', 600, 3, 2],
             ['director@ficct.edu.bo', 'ALQ-LAB-HORA', 'Alquiler LAB-41 para Hackathon FICCT (8 horas)', 1200, 4, 1],
@@ -390,9 +366,9 @@ class DatosSeeder extends Seeder
                     $fechaPago = $vence->copy()->subDays(mt_rand(0, 5))->setTime(mt_rand(8, 20), mt_rand(0, 59));
                     $trx++;
                     DB::table('transacciones')->insert(['codigo' => 'TRX-'.str_pad($trx, 6, '0', STR_PAD_LEFT), 'usuario_id' => $this->u[$email],
-                        'metodo_pago_id' => $metodos[$email] ?? null, 'cuota_id' => $cuota, 'descripcion' => "Cuota $k/$nc - $desc",
+                        'pasarela' => 'stripe', 'referencia_externa' => 'cs_test_demo'.$trx, 'cuota_id' => $cuota, 'descripcion' => "Cuota $k/$nc - $desc",
                         'monto' => DB::table('cuotas')->where('id', $cuota)->value('monto'), 'estado' => 'APROBADA',
-                        'autorizacion' => (string) mt_rand(100000, 999999), 'mensaje' => 'Pago aprobado.',
+                        'autorizacion' => 'pi_demo'.$trx, 'mensaje' => 'Pago con tarjeta confirmado por Stripe.',
                         'created_at' => $fechaPago, 'updated_at' => $fechaPago]);
                     // el trigger tg_cuota_cierra_plan marca el plan PAGADO al pagar la última
                     DB::table('cuotas')->where('id', $cuota)->update(['estado' => 'PAGADA', 'pagado_en' => $fechaPago]);
@@ -410,9 +386,9 @@ class DatosSeeder extends Seeder
             $trx++;
             $concepto = DB::table('conceptos_pago')->find($c[$con]);
             DB::table('transacciones')->insert(['codigo' => 'TRX-'.str_pad($trx, 6, '0', STR_PAD_LEFT), 'usuario_id' => $this->u[$email],
-                'metodo_pago_id' => $metodos[$email] ?? null, 'concepto_id' => $concepto->id, 'descripcion' => $concepto->nombre,
-                'monto' => $concepto->monto, 'estado' => $rechazo ? 'RECHAZADA' : 'APROBADA',
-                'autorizacion' => $rechazo ? null : (string) mt_rand(100000, 999999), 'mensaje' => $rechazo ? 'Fondos insuficientes.' : 'Pago aprobado.',
+                'pasarela' => 'stripe', 'referencia_externa' => 'cs_test_demo'.$trx, 'concepto_id' => $concepto->id, 'descripcion' => $concepto->nombre,
+                'monto' => $concepto->monto, 'estado' => $rechazo ? 'EXPIRADA' : 'APROBADA',
+                'autorizacion' => $rechazo ? null : 'pi_demo'.$trx, 'mensaje' => $rechazo ? 'La página de pago venció sin recibir el pago.' : 'Pago con tarjeta confirmado por Stripe.',
                 'created_at' => $fecha, 'updated_at' => $fecha]);
         }
     }

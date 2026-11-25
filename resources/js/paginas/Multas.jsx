@@ -1,20 +1,20 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { AlertTriangle, Ban, QrCode } from 'lucide-react';
+import { AlertTriangle, Ban, CreditCard } from 'lucide-react';
 import CrudPage from '../componentes/CrudPage';
 import { Badge, Formulario, Modal, useToast } from '../componentes/ui';
 import api, { mensajeError } from '../lib/api';
 import { validar } from '../lib/validar';
 import { bs, fecha, fechaHora } from '../lib/formato';
 import { useAuth } from '../contexto/AuthContext';
-import { PasarelaModal } from './Pagos';
+import { ModalPago } from './Pagos';
 
 /*
  * CU9 - Multas. Se generan solas:
  *   ATRASO  → el auxiliar marca entrada entre los 11 y 30 min (CU7)
  *   FALTA   → falta automática a los 30 min sin marcar (CU7); un permiso posterior la anula
  *   RESERVA → el auxiliar/Encargado registra que una reserva aprobada no se utilizó (CU4)
- * Se pagan con QR PagoFácil o con un método guardado. Vencida (pasado el plazo) = no puede reservar ni pedir permutas.
+ * Se pagan con tarjeta en Stripe. Vencida (pasado el plazo) = no puede reservar ni pedir permutas.
  * Los montos son conceptos de cobro (MULTA-ATRASO, MULTA-FALTA, MULTA-RESERVA): el Encargado los cambia en "Conceptos de cobro".
  */
 const TIPO = { ATRASO: 'Atraso', FALTA: 'Falta', RESERVA: 'Reserva no utilizada' };
@@ -49,7 +49,7 @@ function AccionesMulta({ fila, recargar, onPagar }) {
         <>
             {fila.usuario_id === usuario.id && puede('pagos.pagar') && (
                 <button className="btn btn-primario btn-sm" onClick={() => onPagar(fila)}>
-                    <QrCode className="size-4" aria-hidden /> Pagar
+                    <CreditCard className="size-4" aria-hidden /> Pagar
                 </button>
             )}
             {puede('multas.gestionar') && (
@@ -67,7 +67,7 @@ function AccionesMulta({ fila, recargar, onPagar }) {
 }
 
 export default function Multas() {
-    const { puede, refrescarAvisos } = useAuth();
+    const { puede } = useAuth();
     const gestiona = puede('multas.gestionar');
     const [resumen, setResumen] = useState(null);
     const [pago, setPago] = useState(null);
@@ -107,7 +107,7 @@ export default function Multas() {
                 titulo="Multas"
                 descripcion={gestiona
                     ? <>Se generan solas por atraso o falta de un auxiliar y por reservas no utilizadas. Plazo de pago: {resumen?.dias_plazo ?? 7} días. Los montos se cambian en <Link to="/pagos/conceptos" className="font-semibold text-primario underline">Conceptos de cobro</Link> (MULTA-ATRASO, MULTA-FALTA, MULTA-RESERVA).</>
-                    : `Pague sus multas con QR o con un método guardado. Tiene ${resumen?.dias_plazo ?? 7} días desde que se generan; si vencen, no podrá solicitar reservas ni permutas.`}
+                    : `Pague sus multas con tarjeta (Stripe). Tiene ${resumen?.dias_plazo ?? 7} días desde que se generan; si vencen, no podrá solicitar reservas ni permutas.`}
                 endpoint="multas"
                 singular="multa" femenino
                 recargarClave={recargar}
@@ -138,23 +138,11 @@ export default function Multas() {
                         titulo: `Multa: ${TIPO[f.tipo]} del ${fecha(f.fecha)}`,
                         monto: f.monto,
                         objetivo: { multa_id: f.id },
-                        ejecutar: (metodo) => api.post(`/multas/${f.id}/pagar`, { metodo_pago_id: metodo }),
                     })} />
                 )}
             />
 
-            <PasarelaModal
-                abierto={!!pago}
-                titulo={pago?.titulo}
-                monto={pago?.monto}
-                objetivo={pago?.objetivo}
-                onPagar={(metodo) => pago.ejecutar(metodo)}
-                onCerrar={() => {
-                    setPago(null);
-                    setRecargar((n) => n + 1);
-                    refrescarAvisos?.();
-                }}
-            />
+            <ModalPago abierto={!!pago} titulo={pago?.titulo} monto={pago?.monto} objetivo={pago?.objetivo} onCerrar={() => setPago(null)} />
         </>
     );
 }

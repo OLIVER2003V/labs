@@ -14,7 +14,7 @@ import Reservas from './paginas/Reservas';
 import Roles from './paginas/Roles';
 import { Auditoria, Bitacora } from './paginas/Bitacora';
 import Asistencia from './paginas/Asistencia';
-import { MetodosPago, MisPagos, PlanesPago } from './paginas/Pagos';
+import { MisPagos, PlanesPago, ResultadoPago } from './paginas/Pagos';
 import Perfil from './paginas/Perfil';
 import Permutas from './paginas/Permutas';
 import Mensajes from './paginas/Mensajes';
@@ -53,7 +53,7 @@ function App() {
         ['/permutas', Permutas, 'permutas.ver'],
         ['/mensajes', Mensajes, 'mensajes.usar'],
         ['/pagos', MisPagos, 'pagos.ver'],
-        ['/pagos/metodos', MetodosPago, 'pagos.pagar'],
+        ['/pagos/resultado', ResultadoPago, 'pagos.ver'], // Stripe vuelve aquí después de pagar
         ['/pagos/planes', PlanesPago, 'planes.gestionar'],
         ['/multas', Multas, 'multas.ver'],
         ['/pagos/conceptos', Conceptos, 'conceptos.crear'],

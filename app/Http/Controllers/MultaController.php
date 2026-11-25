@@ -12,7 +12,7 @@ use Illuminate\Http\Request;
 /**
  * CU9 - Multas: cada usuario ve y paga las suyas; el Encargado ve todas y puede anularlas.
  * Se generan solas (ver App\Services\Multas): atraso y falta del auxiliar (CU7) y reserva no utilizada (CU4).
- * Se pagan con QR (POST /api/pagos/qr { multa_id }) o con un método guardado (POST /api/multas/{id}/pagar).
+ * Se pagan con tarjeta en Stripe (POST /api/pagos/stripe { multa_id }).
  */
 class MultaController extends CrudController
 {

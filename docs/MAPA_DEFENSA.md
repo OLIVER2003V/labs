@@ -63,17 +63,15 @@ Flujo: React → `lib/api.js` (Axios + token Bearer) → `routes/api.php` → mi
 - Barra en el encabezado (`Layout.jsx` → `BuscadorGlobal`): predictiva con retardo de 300 ms, flechas + Enter.
 - `GET /api/buscar?q=` (`GeneralController::buscar`): solo busca en lo que el rol puede ver.
 
-## 10. Pagos electrónicos (QR PagoFácil + pasarela simulada)
-- **QR PagoFácil**: el usuario genera un QR, lo paga con la app de su banco y el sistema lo confirma por callback o consulta de estado. Detalle: [PAGOFACIL.md](PAGOFACIL.md).
-  Hoy funciona en modo simulado (`PAGOS_PASARELA=simulada`, botón “Simular pago desde el banco”); con credenciales se cambia a `pagofacil`.
-- Métodos de pago por usuario (tarjeta con Luhn y vencimiento, QR, billetera). Solo se guardan los últimos 4 dígitos + token; el CVV nunca.
-- Pago único (concepto del catálogo) y **planes de pago en cuotas** (Encargado los crea; el usuario paga en orden).
-- `app/Services/PasarelaPago.php`: tarjeta `…0002` → rechazada (para demostrar), > Bs 5000 → rechazada.
-- `PagoController::pagarCuota` usa `lockForUpdate()` (no se puede pagar dos veces la misma cuota).
+## 10. Pagos electrónicos (Stripe Checkout) y multas (CU9)
+- **Stripe Checkout** (modo prueba): el usuario presiona Pagar, va a la página segura de Stripe, paga con tarjeta y vuelve con el comprobante.
+  La tarjeta nunca pasa por nuestro servidor. Detalle y configuración del webhook: [STRIPE.md](STRIPE.md).
+- Se confirma de dos formas (lo que llegue primero): consultando a Stripe al volver, y por **webhook con firma HMAC verificada**.
+  `PagoStripeController::confirmar` usa `lockForUpdate()`: nunca se confirma dos veces.
+- Se paga con Stripe: **cuotas** de planes de pago, **multas** (CU9) y **pagos únicos** (conceptos del catálogo).
+- **Multas (CU9)**: atraso y falta del auxiliar (CU7) y reserva no utilizada (CU4). Con multas vencidas no se puede reservar ni pedir permutas.
 - Trigger `tg_cuota_cierra_plan`: al pagar la última cuota, el plan pasa a PAGADO.
-- **Demo**: Docente → Pagos → pagar cuota con "Tarjeta sin fondos" (rechazada) y luego con "Mi Visa" (aprobada).
-
----
+- **Demo**: Auxiliar → Multas → Pagar → tarjeta `4242 4242 4242 4242` → vuelve "Pago aprobado" y la multa queda PAGADA.
 
 ## Seguridad adicional (para preguntas)
 - **Escalada de privilegios bloqueada**: solo quien tiene `roles.editar` (Administrador) puede crear, editar o borrar cuentas de Administrador (`UsuarioController::protegerSistema`).

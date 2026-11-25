@@ -37,7 +37,7 @@ class RegistroEstudianteTest extends SistemaTestCase
         $this->postJson('/api/login', ['email' => 'lucia.paz@ficct.edu.bo', 'password' => 'Clave2026'])->assertOk();
         $this->como('lucia.paz@ficct.edu.bo');
         $rutas = collect($this->getJson('/api/me')->json('menu'))->pluck('ruta')->all();
-        $this->assertEqualsCanonicalizing(['/', '/disponibilidad', '/reservas', '/laboratorios', '/pagos', '/pagos/metodos', '/multas'], $rutas);
+        $this->assertEqualsCanonicalizing(['/', '/disponibilidad', '/reservas', '/laboratorios', '/pagos', '/multas'], $rutas);
         $this->getJson('/api/reservas')->assertOk();
         $this->getJson('/api/multas')->assertOk();
         $this->getJson('/api/equipos')->assertStatus(403);

@@ -95,7 +95,7 @@ export function Bitacora() {
 }
 
 const TABLAS = ['usuarios', 'roles', 'rol_permiso', 'laboratorios', 'semestres', 'materias', 'horarios', 'reservas', 'equipos', 'incidencias',
-    'objetos_encontrados', 'turnos', 'asistencias', 'conceptos_pago', 'planes_pago', 'cuotas', 'transacciones', 'metodos_pago'];
+    'objetos_encontrados', 'turnos', 'asistencias', 'conceptos_pago', 'planes_pago', 'cuotas', 'transacciones', 'multas'];
 
 /** Auditoría: cambios capturados por los TRIGGERS de PostgreSQL (incluye cambios hechos por SQL directo) */
 export function Auditoria() {
