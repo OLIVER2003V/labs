@@ -135,7 +135,10 @@ Route::middleware(['auth:sanctum', 'bitacora'])->group(function () {
     Route::get('asistencias', [AsistenciaController::class, 'index'])->middleware('permiso:asistencia.ver');
     Route::post('asistencias/entrada', [AsistenciaController::class, 'marcarEntrada'])->middleware('permiso:asistencia.marcar');
     Route::post('asistencias/salida', [AsistenciaController::class, 'marcarSalida'])->middleware('permiso:asistencia.marcar');
+    Route::get('asistencias/hoy', [AsistenciaController::class, 'hoy'])->middleware('permiso:asistencia.marcar');
+    Route::get('asistencias/permisos', [AsistenciaController::class, 'permisos'])->middleware('permiso:asistencia.ver');
     Route::post('asistencias/permiso', [AsistenciaController::class, 'registrarPermiso'])->middleware('permiso:asistencia.gestionar');
+    Route::delete('asistencias/permisos/{id}', [AsistenciaController::class, 'eliminarPermiso'])->whereNumber('id')->middleware('permiso:asistencia.gestionar');
     Route::post('asistencias/faltas', [AsistenciaController::class, 'marcarFaltas'])->middleware('permiso:asistencia.gestionar');
 
     // Pagos

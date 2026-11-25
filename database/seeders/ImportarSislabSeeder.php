@@ -92,6 +92,8 @@ class ImportarSislabSeeder extends Seeder
             'observacion' => $x->estado === 'FALTA' ? 'Sin registro de entrada' : null, 'created_at' => $x->fecha, 'updated_at' => $x->fecha,
         ]));
 
+        self::importarPermisos();
+
         // Notificaciones que el proyecto 1 envió por correo: quedan como historial (ya leídas)
         $this->lote('notificaciones', $s('notificacion')->orderBy('id')->get()->map(fn ($n) => [
             'id' => $n->id, 'usuario_id' => $n->usuario_id, 'titulo' => mb_substr((string) $n->asunto, 0, 150),
@@ -123,6 +125,25 @@ class ImportarSislabSeeder extends Seeder
         ]);
 
         $this->command?->info('Importados desde '.$o.': '.collect(self::DESTINO)->map(fn ($t) => "$t=".DB::table($t)->count())->implode(', '));
+    }
+
+    /** CU7: permisos (licencias) de los auxiliares (también la llama la migración 000014 en una base ya importada) */
+    public static function importarPermisos(): void
+    {
+        if (DB::table('permisos_auxiliar')->exists()) {
+            return;
+        }
+        $o = config('database.origen_sislab', 'sislab');
+        $usuarios = DB::table('usuarios')->pluck('id')->flip();
+        $filas = DB::table("$o.permiso")->orderBy('id')->get()
+            ->filter(fn ($p) => isset($usuarios[$p->auxiliar_id], $usuarios[$p->registrado_por]))
+            ->map(fn ($p) => ['id' => $p->id, 'auxiliar_id' => $p->auxiliar_id, 'fecha' => $p->fecha, 'motivo' => mb_substr(trim($p->motivo), 0, 200),
+                'registrado_por' => $p->registrado_por, 'created_at' => $p->fecha, 'updated_at' => $p->fecha])
+            ->unique(fn ($p) => $p['auxiliar_id'].'|'.$p['fecha'])->values()->all();
+        DB::statement('ALTER TABLE permisos_auxiliar DISABLE TRIGGER USER'); // no auditar la importación
+        DB::table('permisos_auxiliar')->insert($filas);
+        DB::statement('ALTER TABLE permisos_auxiliar ENABLE TRIGGER USER');
+        DB::statement("SELECT setval(pg_get_serial_sequence('permisos_auxiliar', 'id'), COALESCE((SELECT MAX(id) FROM permisos_auxiliar), 1), (SELECT COUNT(*) > 0 FROM permisos_auxiliar))");
     }
 
     /**

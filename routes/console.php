@@ -9,6 +9,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Schedule;
+use App\Services\ControlAsistencia;
+use Carbon\Carbon;
 
 /*
 |--------------------------------------------------------------------------
@@ -204,3 +207,19 @@ Artisan::command('respaldo:restaurar {archivo=ultimo.json} {--reconstruir : Recr
 
     return 0;
 })->purpose('Restaura todos los datos desde un respaldo JSON');
+
+/*
+|--------------------------------------------------------------------------
+| CU7 - Faltas automáticas
+|--------------------------------------------------------------------------
+|  php artisan asistencia:faltas [fecha]   → registra FALTA (o PERMISO) en los turnos que pasaron 30 min sin entrada
+|  Se programa cada 5 minutos. En el servidor basta un cron:  * * * * * php artisan schedule:run
+|  Si el hosting no tiene cron, igual se registran al abrir la pantalla de Asistencia.
+*/
+Artisan::command('asistencia:faltas {fecha? : AAAA-MM-DD (por defecto hoy)}', function () {
+    $fecha = $this->argument('fecha') ? Carbon::parse($this->argument('fecha'))->startOfDay() : Carbon::today();
+    $r = ControlAsistencia::registrarFaltas($fecha);
+    $this->info("{$fecha->format('d/m/Y')}: {$r['faltas']} falta(s) y {$r['permisos']} permiso(s) registrados.");
+})->purpose('Registra las faltas de los auxiliares que no marcaron entrada');
+
+Schedule::command('asistencia:faltas')->everyFiveMinutes()->withoutOverlapping();
