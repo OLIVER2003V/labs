@@ -24,7 +24,8 @@ class Respaldo
     public static function carpeta(): string
     {
         // Respaldos del servidor (php artisan ... --env=servidor) y los locales en carpetas distintas
-        $dir = storage_path('app/respaldos'.(app()->environment('production') ? '/servidor' : ''));
+        // (en la laptop, "artisan --env=servidor" usa el entorno "servidor"; en el propio servidor es "production")
+        $dir = storage_path('app/respaldos'.(app()->environment(['production', 'servidor']) ? '/servidor' : ''));
         File::ensureDirectoryExists($dir);
 
         return $dir;
