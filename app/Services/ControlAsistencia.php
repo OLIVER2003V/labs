@@ -99,16 +99,24 @@ class ControlAsistencia
             ]);
             if ($a->wasRecentlyCreated) {
                 $r[$permiso ? 'permisos' : 'faltas']++;
+                Multas::porAsistencia($a); // CU9: la falta genera multa (un PERMISO no)
             }
         }
 
         return $r;
     }
 
-    /** Justificación retroactiva: las FALTAS del auxiliar en esa fecha pasan a PERMISO. Devuelve cuántas cambió. */
+    /**
+     * Justificación retroactiva: las FALTAS del auxiliar en esa fecha pasan a PERMISO
+     * y sus multas pendientes se anulan (CU9). Devuelve cuántas faltas cambió.
+     */
     public static function justificar(PermisoAuxiliar $permiso): int
     {
-        return Asistencia::where('auxiliar_id', $permiso->auxiliar_id)->whereDate('fecha', $permiso->fecha->toDateString())
-            ->where('estado', 'FALTA')->update(['estado' => 'PERMISO', 'observacion' => mb_substr("Permiso: {$permiso->motivo}", 0, 200), 'updated_at' => now()]);
+        $faltas = Asistencia::where('auxiliar_id', $permiso->auxiliar_id)->whereDate('fecha', $permiso->fecha->toDateString())
+            ->where('estado', 'FALTA')->pluck('id');
+        Asistencia::whereIn('id', $faltas)->update(['estado' => 'PERMISO', 'observacion' => mb_substr("Permiso: {$permiso->motivo}", 0, 200), 'updated_at' => now()]);
+        Multas::anularPorAsistencias($faltas, "Falta justificada con permiso: {$permiso->motivo}", $permiso->registrado_por);
+
+        return $faltas->count();
     }
 }

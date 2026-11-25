@@ -3,10 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\Laboratorio;
+use App\Models\Multa;
 use App\Models\Reserva;
 use App\Models\Semestre;
 use App\Services\Disponibilidad;
+use App\Services\Multas;
 use App\Services\Notificador;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
@@ -27,7 +30,7 @@ class ReservaController extends CrudController
     protected string $modelo = Reserva::class;
     protected array $buscarEn = ['motivo', 'tipo', 'estado', 'laboratorio.codigo', 'solicitante.nombre', 'solicitante.apellido'];
     protected array $con = ['laboratorio', 'solicitante', 'resolutor'];
-    protected array $filtros = ['estado', 'laboratorio_id', 'tipo'];
+    protected array $filtros = ['estado', 'laboratorio_id', 'tipo', 'uso'];
     protected string $ordenarPor = 'fecha';
 
     protected function consulta(Builder $query, Request $request): Builder
@@ -54,6 +57,7 @@ class ReservaController extends CrudController
 
     protected function antesDeGuardar(array $datos, Request $request, ?Model $registro): array
     {
+        Multas::exigirSinVencidas($request->user(), 'solicitar reservas'); // CU9: bloqueo por multas vencidas
         $lab = Laboratorio::findOrFail($datos['laboratorio_id']);
         abort_if($lab->estado !== 'DISPONIBLE', 422, "El laboratorio {$lab->codigo} está en estado {$lab->estado} y no acepta reservas.");
         abort_if(date('N', strtotime($datos['fecha'])) == 7, 422, 'Los laboratorios no atienden los domingos.');
@@ -189,6 +193,45 @@ class ReservaController extends CrudController
         }
 
         return response()->json(['message' => 'Reserva cancelada.', 'data' => $reserva->fresh($this->con)]);
+    }
+
+    /** Minutos de tolerancia después del inicio antes de poder marcar "no se presentó" */
+    const TOLERANCIA_USO_MIN = 15;
+    /** Días hacia atrás en los que todavía se puede registrar el uso */
+    const DIAS_REGISTRO_USO = 7;
+
+    /**
+     * CU9 - El auxiliar o el Encargado registra si la reserva se utilizó.  PUT /api/reservas/{id}/uso  { uso, observacion? }
+     *   NO_UTILIZADA → multa al solicitante (MULTA-RESERVA)   ·   corregir a UTILIZADA anula esa multa si sigue pendiente
+     */
+    public function registrarUso(Request $request, int $id): JsonResponse
+    {
+        $d = $request->validate(['uso' => ['required', Rule::in(['UTILIZADA', 'NO_UTILIZADA'])], 'observacion' => ['nullable', 'string', 'max:200']]);
+        $r = Reserva::with(['laboratorio', 'solicitante'])->findOrFail($id);
+        abort_if($r->estado !== 'APROBADA', 422, "Solo se registra el uso de reservas aprobadas (esta está {$r->estado}).");
+        $inicio = \Carbon\Carbon::parse($r->fecha->format('Y-m-d').' '.$r->hora_inicio);
+        abort_if(now()->lt($inicio->copy()->addMinutes($d['uso'] === 'NO_UTILIZADA' ? self::TOLERANCIA_USO_MIN : 0)), 422,
+            $d['uso'] === 'NO_UTILIZADA'
+                ? 'Todavía no puede marcarla como no utilizada: espere hasta las '.$inicio->copy()->addMinutes(self::TOLERANCIA_USO_MIN)->format('H:i').' del '.$r->fecha->format('d/m/Y').' (15 min de tolerancia).'
+                : 'La reserva todavía no comenzó.');
+        abort_if($r->fecha->lt(today()->subDays(self::DIAS_REGISTRO_USO)), 422, 'Pasaron más de '.self::DIAS_REGISTRO_USO.' días: ya no se puede registrar el uso.');
+
+        $multa = null;
+        DB::transaction(function () use ($r, $d, $request, &$multa) {
+            $r->update(['uso' => $d['uso'], 'uso_registrado_por' => $request->user()->id, 'uso_registrado_en' => now()]
+                + (! empty($d['observacion']) ? ['observacion' => $d['observacion']] : []));
+            if ($d['uso'] === 'NO_UTILIZADA') {
+                $multa = Multas::porReservaNoUtilizada($r);
+            } elseif ($m = \App\Models\Multa::where('reserva_id', $r->id)->where('estado', 'PENDIENTE')->first()) {
+                Multas::anular($m, 'Se corrigió: la reserva sí se utilizó.', $request->user()->id);
+            }
+        });
+
+        return response()->json([
+            'message' => $d['uso'] === 'UTILIZADA' ? 'Se registró que la reserva se utilizó.'
+                : 'Se registró que la reserva no se utilizó.'.($multa ? " Se generó una multa de Bs ".number_format((float) $multa->monto, 2)." a {$r->solicitante->nombre_completo}." : ''),
+            'data' => $r->fresh($this->con),
+        ]);
     }
 
     /** GET /api/disponibilidad?fecha=&hora_inicio=&hora_fin= */

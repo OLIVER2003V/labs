@@ -6,6 +6,7 @@ use App\Models\Asistencia;
 use App\Models\PermisoAuxiliar;
 use App\Models\User;
 use App\Services\ControlAsistencia;
+use App\Services\Multas;
 use App\Services\Notificador;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -101,9 +102,13 @@ class AsistenciaController extends Controller
             'observacion' => $turno->es_permuta ? 'Cubre por permuta' : null,
         ]);
 
+        $multa = Multas::porAsistencia($asistencia); // CU9: el atraso genera multa
+
         return response()->json([
-            'message' => "Entrada registrada a las {$ahora->format('H:i')} ($estado).",
+            'message' => "Entrada registrada a las {$ahora->format('H:i')} ($estado)."
+                .($multa ? ' Se registró una multa de Bs '.number_format((float) $multa->monto, 2).' por atraso.' : ''),
             'data' => $asistencia,
+            'multa' => $multa,
         ], 201);
     }
 

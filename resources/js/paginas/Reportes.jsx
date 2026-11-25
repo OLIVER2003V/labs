@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { CalendarRange, ClipboardCheck, FileSpreadsheet, Loader2, Printer, Users, Wrench } from 'lucide-react';
+import { CalendarRange, ClipboardCheck, FileSpreadsheet, Gavel, Loader2, Printer, Users, Wrench } from 'lucide-react';
 import api, { mensajeError } from '../lib/api';
 import { excelDeReporte, imprimir } from '../lib/exportar';
 import { Cargando, Encabezado, Tarjeta, useOpciones, useToast } from '../componentes/ui';
@@ -16,10 +16,11 @@ const REPORTES = [
     { tipo: 'reservas', titulo: 'Reservas', icono: ClipboardCheck, ayuda: 'Reservas por estado, tipo, laboratorio y principales solicitantes.' },
     { tipo: 'incidencias', titulo: 'Incidencias y objetos', icono: Wrench, ayuda: 'Fallas por laboratorio, tiempo de solución, equipos con más fallas y objetos encontrados.' },
     { tipo: 'asistencia', titulo: 'Asistencia', icono: Users, ayuda: 'Asistencia y puntualidad de cada auxiliar, turnos cubiertos por permuta y permisos.' },
+    { tipo: 'multas', titulo: 'Multas', icono: Gavel, ayuda: 'Multas por atraso, falta y reserva no utilizada: cobrado, por cobrar y usuarios bloqueados.' },
     { tipo: 'semestre', titulo: 'Semestre', icono: CalendarRange, ayuda: 'Indicadores generales de un semestre: horario base, reservas, incidencias, permutas…' },
 ];
 const SERIES_COLOR = ['primario', 'acento', 'peligro', 'info', 'alerta', 'exito'];
-const COLOR_SERIE = { puntual: 'exito', atraso: 'alerta', falta: 'peligro', permiso: 'info', aprobadas: 'exito', resueltas: 'exito', abiertas: 'peligro', otras: 'suave' };
+const COLOR_SERIE = { pagado: 'exito', pendiente: 'alerta', puntual: 'exito', atraso: 'alerta', falta: 'peligro', permiso: 'info', aprobadas: 'exito', resueltas: 'exito', abiertas: 'peligro', otras: 'suave' };
 
 const esNumero = (v) => typeof v === 'number';
 const formato = (v, columna) => (esNumero(v) ? `${v.toLocaleString('es-BO')}${columna?.startsWith('%') ? ' %' : ''}` : v);

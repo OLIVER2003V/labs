@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Bitacora;
 use App\Models\Menu;
 use App\Models\Mensaje;
+use App\Models\Multa;
 use App\Models\Permuta;
 use App\Models\Rol;
 use App\Models\User;
@@ -176,6 +177,9 @@ class AuthController extends Controller
         }
         if (in_array('mensajes.usar', $permisos, true)) {        // mensajes sin leer
             $avisos['/mensajes'] = Mensaje::where('destinatario_id', $usuario->id)->whereNull('leido_en')->count();
+        }
+        if (in_array('multas.ver', $permisos, true)) {           // mis multas sin pagar
+            $avisos['/multas'] = Multa::where('usuario_id', $usuario->id)->where('estado', 'PENDIENTE')->count();
         }
         if (in_array('permutas.ver', $permisos, true)) {         // permutas que esperan mi respuesta o mi aprobación
             $avisos['/permutas'] = Permuta::whereDate('fecha', '>=', now()->toDateString())

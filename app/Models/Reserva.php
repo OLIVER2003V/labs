@@ -8,7 +8,7 @@ class Reserva extends Model
 {
     protected $table = 'reservas';
 
-    protected $fillable = ['laboratorio_id', 'solicitante_id', 'fecha', 'hora_inicio', 'hora_fin', 'tipo', 'motivo', 'estado', 'resuelto_por', 'observacion'];
+    protected $fillable = ['laboratorio_id', 'solicitante_id', 'fecha', 'hora_inicio', 'hora_fin', 'tipo', 'motivo', 'estado', 'resuelto_por', 'observacion', 'uso', 'uso_registrado_por', 'uso_registrado_en'];
 
     protected function casts(): array
     {

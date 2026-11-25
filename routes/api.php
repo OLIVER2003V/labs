@@ -13,6 +13,7 @@ use App\Http\Controllers\IncidenciaController;
 use App\Http\Controllers\LaboratorioController;
 use App\Http\Controllers\MateriaController;
 use App\Http\Controllers\MensajeController;
+use App\Http\Controllers\MultaController;
 use App\Http\Controllers\NotificacionController;
 use App\Http\Controllers\ObjetoEncontradoController;
 use App\Http\Controllers\PagoController;
@@ -112,6 +113,7 @@ Route::middleware(['auth:sanctum', 'bitacora'])->group(function () {
     Route::put('reservas/{id}/aprobar', [ReservaController::class, 'aprobar'])->middleware('permiso:reservas.aprobar');
     Route::put('reservas/{id}/rechazar', [ReservaController::class, 'rechazar'])->middleware('permiso:reservas.aprobar');
     Route::put('reservas/{id}/cancelar', [ReservaController::class, 'cancelar'])->middleware('permiso:reservas.cancelar');
+    Route::put('reservas/{id}/uso', [ReservaController::class, 'registrarUso'])->middleware('permiso:reservas.registrar_uso');
 
     // Inventario, incidencias, objetos encontrados
     crud('equipos', EquipoController::class, 'equipos');
@@ -159,6 +161,12 @@ Route::middleware(['auth:sanctum', 'bitacora'])->group(function () {
     Route::post('pagos/unico', [PagoController::class, 'pagoUnico'])->middleware('permiso:pagos.pagar');
     Route::get('pagos/transacciones', [PagoController::class, 'transacciones'])->middleware('permiso:pagos.ver');
     Route::post('pagos/qr', [PagoQrController::class, 'iniciar'])->middleware('permiso:pagos.pagar');
+
+    // CU9 - Multas (atraso, falta, reserva no utilizada)
+    Route::get('multas', [MultaController::class, 'index'])->middleware('permiso:multas.ver');
+    Route::get('multas/resumen', [MultaController::class, 'resumen'])->middleware('permiso:multas.ver');
+    Route::post('multas/{id}/pagar', [PagoController::class, 'pagarMulta'])->whereNumber('id')->middleware('permiso:pagos.pagar');
+    Route::put('multas/{id}/anular', [MultaController::class, 'anular'])->whereNumber('id')->middleware('permiso:multas.gestionar');
     Route::get('pagos/transacciones/{id}/estado', [PagoQrController::class, 'estado'])->whereNumber('id')->middleware('permiso:pagos.ver');
     Route::post('pagos/simulador/{id}/pagar', [PagoQrController::class, 'simularPago'])->whereNumber('id')->middleware('permiso:pagos.pagar');
     crud('conceptos', ConceptoPagoController::class, 'conceptos', ['ver' => 'pagos.ver']);

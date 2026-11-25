@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Ban, Check, X } from 'lucide-react';
+import { Ban, Check, CheckCheck, UserX, X } from 'lucide-react';
 import CrudPage from '../componentes/CrudPage';
 import { Badge, Confirmar, Formulario, Modal, useToast } from '../componentes/ui';
 import api, { mensajeError } from '../lib/api';
@@ -16,6 +16,7 @@ function AccionesReserva({ fila, recargar }) {
     const notificar = useToast();
     const [rechazo, setRechazo] = useState(false);
     const [cancelar, setCancelar] = useState(false);
+    const [noUso, setNoUso] = useState(false);
     const [v, setV] = useState({});
     const [errores, setErrores] = useState({});
     const [enviando, setEnviando] = useState(false);
@@ -26,6 +27,7 @@ function AccionesReserva({ fila, recargar }) {
             notificar((await api.put(`/reservas/${fila.id}/${accion}`, datos)).data.message);
             setRechazo(false);
             setCancelar(false);
+            setNoUso(false);
             recargar();
         } catch (e) {
             notificar(mensajeError(e), 'error');
@@ -38,8 +40,24 @@ function AccionesReserva({ fila, recargar }) {
     const cancelable = ['PENDIENTE', 'APROBADA'].includes(fila.estado) && fila.fecha >= hoyISO()
         && (fila.solicitante_id === usuario.id || puede('reservas.aprobar')) && puede('reservas.cancelar');
 
+    // CU9: después de la hora de inicio, el auxiliar/Encargado registra si se usó (si no se usó, multa al solicitante)
+    const empezo = fila.estado === 'APROBADA' && new Date(`${fila.fecha}T${hora(fila.hora_inicio)}`) <= new Date();
+    const registraUso = empezo && puede('reservas.registrar_uso') && fila.uso !== 'UTILIZADA';
+
     return (
         <>
+            {registraUso && (
+                <>
+                    <button className="btn btn-fantasma btn-sm text-exito" disabled={enviando} onClick={() => ejecutar('uso', { uso: 'UTILIZADA' })} title="La reserva se utilizó">
+                        <CheckCheck className="size-4" aria-hidden /> Se usó
+                    </button>
+                    {fila.uso !== 'NO_UTILIZADA' && (
+                        <button className="btn btn-fantasma btn-sm text-peligro" onClick={() => setNoUso(true)} title="Nadie se presentó: genera multa">
+                            <UserX className="size-4" aria-hidden /> No se presentó
+                        </button>
+                    )}
+                </>
+            )}
             {pendiente && puede('reservas.aprobar') && (
                 <>
                     <button className="btn btn-fantasma btn-sm text-exito" disabled={enviando} onClick={() => ejecutar('aprobar')} title="Aprobar">
@@ -67,6 +85,14 @@ function AccionesReserva({ fila, recargar }) {
                 />
             </Modal>
             <Confirmar
+                abierto={noUso}
+                titulo={`Reserva #${fila.id} no utilizada`}
+                mensaje={`Se registrará que nadie usó el ${fila.laboratorio?.codigo} el ${fecha(fila.fecha)} de ${hora(fila.hora_inicio)} a ${hora(fila.hora_fin)}, y se generará una multa a ${fila.solicitante?.nombre_completo}.`}
+                textoBoton="Registrar y multar"
+                onConfirmar={() => ejecutar('uso', { uso: 'NO_UTILIZADA' })}
+                onCerrar={() => setNoUso(false)}
+            />
+            <Confirmar
                 abierto={cancelar}
                 titulo={`Cancelar reserva #${fila.id}`}
                 mensaje={`Se liberará el ${fila.laboratorio?.codigo} el ${fecha(fila.fecha)} de ${hora(fila.hora_inicio)} a ${hora(fila.hora_fin)}.`}
@@ -92,6 +118,7 @@ export default function Reservas() {
             inicial={{ tipo: 'EXAMEN', fecha: hoyISO() }}
             filtros={[
                 { name: 'estado', label: 'Estado', opciones: ['PENDIENTE', 'APROBADA', 'RECHAZADA', 'CANCELADA'] },
+                { name: 'uso', label: 'Uso', opciones: [{ value: 'UTILIZADA', label: 'Utilizada' }, { value: 'NO_UTILIZADA', label: 'No utilizada' }] },
                 { name: 'tipo', label: 'Tipo', opciones: TIPOS },
             ]}
             columnas={[
@@ -102,7 +129,7 @@ export default function Reservas() {
                 { key: 'solicitante', label: 'Solicitante', render: (f) => <>{f.solicitante?.nombre_completo}<span className="block text-xs text-suave">{fechaHora(f.created_at)}</span></> },
                 {
                     key: 'estado', label: 'Estado',
-                    render: (f) => <><Badge valor={f.estado} />{f.observacion && <span className="mt-1 block max-w-56 text-xs text-suave">{f.observacion}</span>}{f.resolutor && <span className="block text-xs text-suave">por {f.resolutor.nombre}</span>}</>,
+                    render: (f) => <><Badge valor={f.estado} />{f.uso && <span className={`ml-1 text-xs font-semibold ${f.uso === 'UTILIZADA' ? 'text-exito' : 'text-peligro'}`}>{f.uso === 'UTILIZADA' ? '✓ utilizada' : '✗ no utilizada'}</span>}{f.observacion && <span className="mt-1 block max-w-56 text-xs text-suave">{f.observacion}</span>}{f.resolutor && <span className="block text-xs text-suave">por {f.resolutor.nombre}</span>}</>,
                 },
             ]}
             acciones={(fila, recargar) => <AccionesReserva fila={fila} recargar={recargar} />}

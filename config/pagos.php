@@ -11,6 +11,9 @@ return [
     // Minutos de validez del QR antes de marcarse EXPIRADO
     'minutos_qr' => (int) env('PAGOS_MINUTOS_QR', 15),
 
+    // CU9: días para pagar una multa antes de que venza (vencida = no puede reservar ni pedir permutas)
+    'dias_multa' => (int) env('PAGOS_DIAS_MULTA', 7),
+
     'pagofacil' => [
         // Completar con los datos que entregue PagoFácil (NO subir a git: van en .env)
         'url' => env('PAGOFACIL_URL', ''),

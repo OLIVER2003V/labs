@@ -19,6 +19,7 @@ import Perfil from './paginas/Perfil';
 import Permutas from './paginas/Permutas';
 import Mensajes from './paginas/Mensajes';
 import Reportes from './paginas/Reportes';
+import Multas from './paginas/Multas';
 import {
     Conceptos, Equipos, FechasBloqueadas, Horarios, Incidencias, Laboratorios, Materias, Objetos, Semestres, Turnos, Usuarios,
 } from './paginas/Modulos';
@@ -54,6 +55,7 @@ function App() {
         ['/pagos', MisPagos, 'pagos.ver'],
         ['/pagos/metodos', MetodosPago, 'pagos.pagar'],
         ['/pagos/planes', PlanesPago, 'planes.gestionar'],
+        ['/multas', Multas, 'multas.ver'],
         ['/pagos/conceptos', Conceptos, 'conceptos.crear'],
         ['/laboratorios', Laboratorios, 'laboratorios.ver'],
         ['/semestres', Semestres, 'semestres.ver'],

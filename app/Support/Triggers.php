@@ -17,7 +17,7 @@ class Triggers
     const AUDITADAS = [
         'usuarios', 'roles', 'rol_permiso', 'laboratorios', 'semestres', 'materias', 'horarios',
         'reservas', 'equipos', 'equipos_red', 'incidencias', 'objetos_encontrados', 'turnos', 'asistencias', 'permisos_auxiliar', 'permutas',
-        'conceptos_pago', 'planes_pago', 'cuotas', 'transacciones', 'metodos_pago',
+        'conceptos_pago', 'planes_pago', 'cuotas', 'transacciones', 'metodos_pago', 'multas',
     ];
 
     /** Triggers que deben existir: nombre => tabla */

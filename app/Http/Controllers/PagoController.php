@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ConceptoPago;
 use App\Models\Cuota;
 use App\Models\MetodoPago;
+use App\Models\Multa;
 use App\Models\PlanPago;
 use App\Models\Transaccion;
 use App\Models\User;
@@ -177,6 +178,27 @@ class PagoController extends Controller
                 "Cuota {$cuota->numero}/{$cuota->plan->nro_cuotas} - {$cuota->plan->descripcion}", ['cuota_id' => $cuota->id]);
             if ($trx->estado === 'APROBADA') {
                 $cuota->update(['estado' => 'PAGADA', 'pagado_en' => now()]); // el trigger cierra el plan si era la última
+            }
+
+            return $this->respuesta($trx);
+        });
+    }
+
+    /** CU9 - Pagar una multa con un método guardado.  POST /api/multas/{id}/pagar  { metodo_pago_id } */
+    public function pagarMulta(Request $request, int $id): JsonResponse
+    {
+        $d = $request->validate(['metodo_pago_id' => ['required', 'integer']]);
+        $usuario = $request->user();
+        $metodo = MetodoPago::where('usuario_id', $usuario->id)->findOrFail($d['metodo_pago_id']);
+
+        return DB::transaction(function () use ($id, $usuario, $metodo) {
+            $multa = Multa::lockForUpdate()->findOrFail($id); // bloqueo: evita pagar dos veces
+            abort_if($multa->usuario_id !== $usuario->id, 403, 'Esta multa no le pertenece.');
+            abort_if($multa->estado !== 'PENDIENTE', 422, "La multa está {$multa->estado}.");
+
+            $trx = $this->procesar($usuario, $metodo, (float) $multa->monto, "Multa: {$multa->motivo}", ['multa_id' => $multa->id, 'concepto_id' => $multa->concepto_id]);
+            if ($trx->estado === 'APROBADA') {
+                $multa->update(['estado' => 'PAGADA', 'pagada_en' => now()]);
             }
 
             return $this->respuesta($trx);

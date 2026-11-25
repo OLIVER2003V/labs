@@ -254,6 +254,57 @@ class Reportes
         ];
     }
 
+    // ------------------------------------------------------------------ CU9 multas
+    public static function multas(string $desde, string $hasta): array
+    {
+        $base = fn () => DB::table('multas')->whereBetween('multas.fecha', [$desde, $hasta]);
+        $suma = fn ($q) => round((float) $q->sum('monto'), 2);
+        $pagado = $suma($base()->where('estado', 'PAGADA'));
+        $pendiente = $suma($base()->where('estado', 'PENDIENTE'));
+        $vencidas = $base()->where('estado', 'PENDIENTE')->whereDate('vence_en', '<', today())->count();
+        $total = $base()->count();
+
+        $porTipo = collect(['ATRASO' => 'Atraso', 'FALTA' => 'Falta', 'RESERVA' => 'Reserva no utilizada'])->map(function ($nombre, $tipo) use ($base) {
+            $q = fn () => $base()->where('tipo', $tipo);
+
+            return [$nombre, $q()->count(), $q()->where('estado', 'PAGADA')->count(), $q()->where('estado', 'PENDIENTE')->count(),
+                $q()->where('estado', 'ANULADA')->count(), round((float) $q()->where('estado', 'PAGADA')->sum('monto'), 2), round((float) $q()->where('estado', 'PENDIENTE')->sum('monto'), 2)];
+        })->values()->all();
+
+        $porUsuario = $base()->join('usuarios', 'usuarios.id', '=', 'multas.usuario_id')->join('roles', 'roles.id', '=', 'usuarios.rol_id')
+            ->groupBy('usuarios.id', 'usuarios.nombre', 'usuarios.apellido', 'roles.nombre')
+            ->selectRaw("usuarios.nombre || ' ' || usuarios.apellido AS nombre, roles.nombre AS rol, COUNT(*) AS total,
+                COUNT(*) FILTER (WHERE multas.tipo = 'ATRASO') AS atrasos, COUNT(*) FILTER (WHERE multas.tipo = 'FALTA') AS faltas,
+                COUNT(*) FILTER (WHERE multas.tipo = 'RESERVA') AS reservas,
+                COALESCE(SUM(multas.monto) FILTER (WHERE multas.estado = 'PAGADA'), 0) AS pagado,
+                COALESCE(SUM(multas.monto) FILTER (WHERE multas.estado = 'PENDIENTE'), 0) AS pendiente,
+                COUNT(*) FILTER (WHERE multas.estado = 'PENDIENTE' AND multas.vence_en < CURRENT_DATE) AS vencidas")
+            ->orderByDesc('pendiente')->orderByDesc('total')->get()
+            ->map(fn ($u) => [$u->nombre, $u->rol, (int) $u->total, (int) $u->atrasos, (int) $u->faltas, (int) $u->reservas,
+                round((float) $u->pagado, 2), round((float) $u->pendiente, 2), (int) $u->vencidas > 0 ? 'Sí' : 'No'])->all();
+
+        return [
+            'titulo' => 'Reporte de multas',
+            'subtitulo' => self::rango($desde, $hasta).' · Atrasos y faltas de auxiliares, reservas no utilizadas',
+            'resumen' => [
+                ['etiqueta' => 'Multas', 'valor' => $total],
+                ['etiqueta' => 'Cobrado', 'valor' => 'Bs '.number_format($pagado, 2)],
+                ['etiqueta' => 'Por cobrar', 'valor' => 'Bs '.number_format($pendiente, 2)],
+                ['etiqueta' => 'Vencidas', 'valor' => $vencidas],
+                ['etiqueta' => 'Usuarios bloqueados', 'valor' => count(array_filter($porUsuario, fn ($u) => $u[8] === 'Sí'))],
+            ],
+            'secciones' => [
+                ['titulo' => 'Por tipo', 'columnas' => ['Tipo', 'Multas', 'Pagadas', 'Pendientes', 'Anuladas', 'Cobrado (Bs)', 'Por cobrar (Bs)'],
+                    'filas' => $porTipo, 'total' => array_merge(['TOTAL'], self::sumas($porTipo, 1, 6))],
+                ['titulo' => 'Por usuario', 'columnas' => ['Usuario', 'Rol', 'Multas', 'Atrasos', 'Faltas', 'Reservas', 'Pagado (Bs)', 'Pendiente (Bs)', 'Bloqueado'],
+                    'filas' => $porUsuario],
+            ],
+            'grafico' => ['tipo' => 'barras', 'apilado' => true, 'unidad' => 'Bs',
+                'datos' => array_map(fn ($f) => ['nombre' => $f[0], 'pagado' => $f[5], 'pendiente' => $f[6]], $porTipo),
+                'series' => [['pagado', 'Cobrado'], ['pendiente', 'Por cobrar']]],
+        ];
+    }
+
     // ------------------------------------------------------------------ ESTSEM
     public static function semestre(Semestre $s): array
     {

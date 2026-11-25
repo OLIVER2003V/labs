@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
     ArrowLeftRight, BarChart3, BookOpen, Building2, CalendarCheck, CalendarDays, CalendarRange, CalendarSearch, CalendarX, Circle, Clock,
-    CreditCard, FileSpreadsheet, History, Home, ListChecks, LogOut, Menu as MenuIcon, MessagesSquare, Monitor, PackageSearch, ScrollText, Search, ShieldCheck,
+    CreditCard, FileSpreadsheet, Gavel, History, Home, ListChecks, LogOut, Menu as MenuIcon, MessagesSquare, Monitor, PackageSearch, ScrollText, Search, ShieldCheck,
     Tags, UserCheck, UserCircle2, Users, Wallet, Wrench, X,
 } from 'lucide-react';
 import api from '../lib/api';
@@ -16,7 +16,7 @@ import Notificaciones from './Notificaciones';
 // Íconos disponibles para el menú (el nombre se guarda en la columna menus.icono)
 const ICONOS = {
     ArrowLeftRight, BarChart3, BookOpen, Building2, CalendarCheck, CalendarDays, CalendarRange, CalendarSearch, CalendarX, Clock, CreditCard,
-    FileSpreadsheet, History, Home, ListChecks, MessagesSquare, Monitor, PackageSearch, ScrollText, ShieldCheck, Tags, UserCheck, Users, Wallet, Wrench,
+    FileSpreadsheet, Gavel, History, Home, ListChecks, MessagesSquare, Monitor, PackageSearch, ScrollText, ShieldCheck, Tags, UserCheck, Users, Wallet, Wrench,
 };
 
 /** Ícono por nombre (el nombre viene de la tabla menus) */

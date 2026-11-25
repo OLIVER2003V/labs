@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Bitacora;
 use App\Models\ConceptoPago;
 use App\Models\Cuota;
+use App\Models\Multa;
 use App\Models\Transaccion;
 use App\Services\Pagos\PasarelaQr;
 use App\Services\Pagos\SimuladaQr;
@@ -20,7 +21,7 @@ use Throwable;
  *  2. el cliente escanea y paga con la app de su banco
  *  3a. PagoFácil avisa a POST /api/pagos/pagofacil/callback  → se confirma
  *  3b. o la pantalla consulta GET /api/pagos/transacciones/{id}/estado cada 3 s → se confirma
- *  4. al confirmar: transacción APROBADA y cuota PAGADA (el trigger cierra el plan si era la última)
+ *  4. al confirmar: transacción APROBADA y cuota PAGADA (el trigger cierra el plan si era la última) o multa PAGADA (CU9)
  */
 class PagoQrController extends Controller
 {
@@ -29,12 +30,18 @@ class PagoQrController extends Controller
     public function iniciar(Request $request): JsonResponse
     {
         $d = $request->validate([
-            'cuota_id' => ['required_without:concepto_id', 'nullable', 'integer'],
-            'concepto_id' => ['required_without:cuota_id', 'nullable', 'integer'],
-        ], ['cuota_id.required_without' => 'Indique la cuota o el concepto a pagar.']);
+            'cuota_id' => ['required_without_all:concepto_id,multa_id', 'nullable', 'integer'],
+            'concepto_id' => ['nullable', 'integer'],
+            'multa_id' => ['nullable', 'integer'],
+        ], ['cuota_id.required_without_all' => 'Indique la cuota, la multa o el concepto a pagar.']);
         $usuario = $request->user();
 
-        if (! empty($d['cuota_id'])) {
+        if (! empty($d['multa_id'])) {
+            $multa = Multa::findOrFail($d['multa_id']);
+            abort_if($multa->usuario_id !== $usuario->id, 403, 'Esta multa no le pertenece.');
+            abort_if($multa->estado !== 'PENDIENTE', 422, "La multa está {$multa->estado}.");
+            $datos = ['multa_id' => $multa->id, 'concepto_id' => $multa->concepto_id, 'monto' => $multa->monto, 'descripcion' => "Multa: {$multa->motivo}"];
+        } elseif (! empty($d['cuota_id'])) {
             $cuota = Cuota::with('plan')->findOrFail($d['cuota_id']);
             abort_if($cuota->plan->usuario_id !== $usuario->id, 403, 'Esta cuota no le pertenece.');
             abort_if($cuota->plan->estado !== 'VIGENTE', 422, "El plan está {$cuota->plan->estado}.");
@@ -51,7 +58,11 @@ class PagoQrController extends Controller
         // Si ya hay un QR vigente para lo mismo, se reutiliza (evita cobrar dos veces)
         $vigente = Transaccion::where('usuario_id', $usuario->id)->where('estado', 'PENDIENTE')
             ->where('pasarela', $this->pasarela->nombre())->where('expira_en', '>', now())
-            ->where(fn ($q) => isset($datos['cuota_id']) ? $q->where('cuota_id', $datos['cuota_id']) : $q->where('concepto_id', $datos['concepto_id']))
+            ->where(fn ($q) => match (true) {
+                isset($datos['multa_id']) => $q->where('multa_id', $datos['multa_id']),
+                isset($datos['cuota_id']) => $q->where('cuota_id', $datos['cuota_id']),
+                default => $q->where('concepto_id', $datos['concepto_id'])->whereNull('multa_id'),
+            })
             ->latest('id')->first();
         if ($vigente) {
             return $this->respuesta($vigente);
@@ -155,6 +166,14 @@ class PagoQrController extends Controller
                     $mensaje = 'Pago recibido, pero la cuota ya estaba pagada: corresponde devolución.';
                 } else {
                     $cuota->update(['estado' => 'PAGADA', 'pagado_en' => now()]); // el trigger cierra el plan si era la última
+                }
+            }
+            if ($t->multa_id) {
+                $multa = Multa::lockForUpdate()->find($t->multa_id);
+                if ($multa->estado === 'PENDIENTE') {
+                    $multa->update(['estado' => 'PAGADA', 'pagada_en' => now()]);
+                } else {
+                    $mensaje = "Pago recibido, pero la multa ya estaba {$multa->estado}: corresponde devolución.";
                 }
             }
             $t->update(['estado' => 'APROBADA', 'autorizacion' => $autorizacion ?? (string) random_int(100000, 999999), 'mensaje' => $mensaje]);

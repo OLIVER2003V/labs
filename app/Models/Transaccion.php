@@ -8,7 +8,7 @@ class Transaccion extends Model
 {
     protected $table = 'transacciones';
 
-    protected $fillable = ['codigo', 'usuario_id', 'metodo_pago_id', 'cuota_id', 'concepto_id', 'descripcion', 'monto', 'estado', 'autorizacion', 'mensaje', 'pasarela', 'referencia_externa', 'qr_contenido', 'expira_en'];
+    protected $fillable = ['codigo', 'usuario_id', 'metodo_pago_id', 'cuota_id', 'concepto_id', 'multa_id', 'descripcion', 'monto', 'estado', 'autorizacion', 'mensaje', 'pasarela', 'referencia_externa', 'qr_contenido', 'expira_en'];
 
     protected function casts(): array
     {

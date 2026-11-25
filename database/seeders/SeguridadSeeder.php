@@ -22,7 +22,7 @@ class SeguridadSeeder extends Seeder
         'semestres' => ['ver' => 'Ver semestres y fechas bloqueadas', 'crear' => 'Registrar semestres y fechas bloqueadas', 'editar' => 'Modificar/activar/cerrar semestres', 'eliminar' => 'Eliminar semestres y fechas bloqueadas'],
         'horarios' => ['ver' => 'Ver horario base y materias', 'crear' => 'Registrar clases y materias', 'editar' => 'Modificar clases y materias', 'eliminar' => 'Eliminar clases y materias'],
         'disponibilidad' => ['ver' => 'Consultar disponibilidad de laboratorios'],
-        'reservas' => ['ver' => 'Ver sus reservas', 'ver_todas' => 'Ver reservas de todos', 'crear' => 'Solicitar reservas', 'aprobar' => 'Aprobar o rechazar reservas', 'cancelar' => 'Cancelar reservas'],
+        'reservas' => ['ver' => 'Ver sus reservas', 'ver_todas' => 'Ver reservas de todos', 'crear' => 'Solicitar reservas', 'aprobar' => 'Aprobar o rechazar reservas', 'cancelar' => 'Cancelar reservas', 'registrar_uso' => 'Registrar si una reserva se utilizó o no (genera multa)'],
         'equipos' => ['ver' => 'Ver inventario', 'crear' => 'Registrar equipos', 'editar' => 'Modificar equipos', 'eliminar' => 'Eliminar equipos'],
         'incidencias' => ['ver' => 'Ver incidencias', 'crear' => 'Reportar incidencias', 'gestionar' => 'Atender y resolver incidencias'],
         'objetos' => ['ver' => 'Ver objetos encontrados', 'crear' => 'Registrar objetos encontrados', 'entregar' => 'Registrar entrega de objetos'],
@@ -32,6 +32,7 @@ class SeguridadSeeder extends Seeder
         'asistencia' => ['ver' => 'Ver asistencia', 'marcar' => 'Marcar entrada y salida', 'gestionar' => 'Registrar permisos y faltas, ver toda la asistencia'],
         'pagos' => ['ver' => 'Ver sus pagos, planes y métodos', 'pagar' => 'Registrar métodos y realizar pagos', 'ver_todos' => 'Ver transacciones de todos'],
         'planes' => ['gestionar' => 'Crear y anular planes de pago'],
+        'multas' => ['ver' => 'Ver y pagar sus multas', 'gestionar' => 'Ver las multas de todos y anularlas'],
         'conceptos' => ['crear' => 'Registrar conceptos de cobro', 'editar' => 'Modificar conceptos de cobro', 'eliminar' => 'Eliminar conceptos de cobro'],
     ];
 
@@ -48,17 +49,17 @@ class SeguridadSeeder extends Seeder
     const ROL_PERMISOS = [
         'ENC' => ['dashboard.ver', 'reportes.ver', 'usuarios.ver', 'usuarios.crear', 'usuarios.editar', 'bitacora.ver',
             'laboratorios.*', 'semestres.*', 'horarios.*', 'disponibilidad.ver', 'reservas.*', 'equipos.*',
-            'incidencias.*', 'objetos.*', 'turnos.*', 'asistencia.ver', 'asistencia.gestionar', 'permutas.ver', 'permutas.aprobar', 'mensajes.usar',
+            'incidencias.*', 'objetos.*', 'turnos.*', 'asistencia.ver', 'asistencia.gestionar', 'permutas.ver', 'permutas.aprobar', 'mensajes.usar', 'multas.ver', 'multas.gestionar',
             'pagos.*', 'planes.gestionar', 'conceptos.*'],
         'DOC' => ['laboratorios.ver', 'horarios.ver', 'disponibilidad.ver', 'reservas.ver', 'reservas.crear',
-            'reservas.cancelar', 'equipos.ver', 'incidencias.ver', 'incidencias.crear', 'pagos.ver', 'pagos.pagar'],
+            'reservas.cancelar', 'equipos.ver', 'incidencias.ver', 'incidencias.crear', 'pagos.ver', 'pagos.pagar', 'multas.ver'],
         'AUX' => ['laboratorios.ver', 'horarios.ver', 'disponibilidad.ver', 'reservas.ver', 'reservas.crear', 'reservas.cancelar',
             'equipos.ver', 'incidencias.ver', 'incidencias.crear', 'objetos.*', 'turnos.ver', 'asistencia.ver',
-            'asistencia.marcar', 'pagos.ver', 'pagos.pagar', 'permutas.ver', 'permutas.solicitar', 'mensajes.usar'],
+            'asistencia.marcar', 'pagos.ver', 'pagos.pagar', 'permutas.ver', 'permutas.solicitar', 'mensajes.usar', 'multas.ver', 'reservas.registrar_uso'],
         // Se registra solo desde el login; el Encargado aprueba la cuenta
-        'EST' => ['laboratorios.ver', 'disponibilidad.ver', 'reservas.ver', 'reservas.crear', 'reservas.cancelar'],
+        'EST' => ['laboratorios.ver', 'disponibilidad.ver', 'reservas.ver', 'reservas.crear', 'reservas.cancelar', 'multas.ver', 'pagos.ver', 'pagos.pagar'],
         'DIR' => ['dashboard.ver', 'reportes.ver', 'laboratorios.ver', 'horarios.ver', 'disponibilidad.ver', 'reservas.ver', 'reservas.ver_todas',
-            'reservas.crear', 'reservas.cancelar', 'equipos.ver', 'incidencias.ver', 'pagos.ver', 'pagos.pagar', 'pagos.ver_todos'],
+            'reservas.crear', 'reservas.cancelar', 'equipos.ver', 'incidencias.ver', 'pagos.ver', 'pagos.pagar', 'pagos.ver_todos', 'multas.ver'],
     ];
 
     /** grupo, título, ruta React, ícono (lucide), permiso requerido */
@@ -79,6 +80,7 @@ class SeguridadSeeder extends Seeder
         ['Operación', 'Permutas de turno', '/permutas', 'ArrowLeftRight', 'permutas.ver'],
         ['Pagos', 'Mis pagos', '/pagos', 'Wallet', 'pagos.ver'],
         ['Pagos', 'Métodos de pago', '/pagos/metodos', 'CreditCard', 'pagos.pagar'],
+        ['Pagos', 'Multas', '/multas', 'Gavel', 'multas.ver'],
         ['Pagos', 'Planes de pago', '/pagos/planes', 'ListChecks', 'planes.gestionar'],
         ['Pagos', 'Conceptos de cobro', '/pagos/conceptos', 'Tags', 'conceptos.crear'],
         ['Configuración', 'Laboratorios', '/laboratorios', 'Building2', 'laboratorios.ver'],

@@ -6,6 +6,7 @@ use App\Models\Asistencia;
 use App\Models\Permuta;
 use App\Models\Turno;
 use App\Models\User;
+use App\Services\Multas;
 use App\Services\Notificador;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
@@ -59,6 +60,7 @@ class PermutaController extends CrudController
     protected function antesDeGuardar(array $datos, Request $request, ?Model $registro): array
     {
         $yo = $request->user();
+        Multas::exigirSinVencidas($yo, 'solicitar permutas'); // CU9: bloqueo por multas vencidas
         $turno = Turno::with('semestre')->findOrFail($datos['turno_id']);
         abort_if($turno->auxiliar_id !== $yo->id, 422, 'Solo puede pedir permuta de sus propios turnos.');
         $this->validarFechaDelTurno($turno, $datos['fecha']);

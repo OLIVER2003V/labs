@@ -20,7 +20,7 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
  */
 class ReporteController extends Controller
 {
-    const TIPOS = ['ocupacion', 'reservas', 'incidencias', 'asistencia', 'semestre'];
+    const TIPOS = ['ocupacion', 'reservas', 'incidencias', 'asistencia', 'multas', 'semestre'];
     const MAX_DIAS = 366;
 
     public function mostrar(Request $request, string $tipo): JsonResponse

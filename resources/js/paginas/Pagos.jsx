@@ -77,7 +77,7 @@ function PantallaQr({ qr, onTerminar }) {
  * Modal de pago: QR PagoFácil (o simulado) o un método guardado (tarjeta / billetera, pasarela interna simulada)
  * objetivo = { cuota_id } o { concepto_id }   ·   onPagar(metodoId) paga con un método guardado
  */
-function PasarelaModal({ abierto, titulo, monto, objetivo, onCerrar, onPagar }) {
+export function PasarelaModal({ abierto, titulo, monto, objetivo, onCerrar, onPagar }) {
     const [metodos, setMetodos] = useState(null);
     const [metodo, setMetodo] = useState('qr');
     const [estado, setEstado] = useState('elegir'); // elegir | procesando | qr | resultado
