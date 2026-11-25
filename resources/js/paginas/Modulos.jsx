@@ -27,20 +27,18 @@ export const Laboratorios = () => (
         singular="laboratorio"
         permisos={permisosDe('laboratorios')}
         filtros={[{ name: 'estado', label: 'Estado', opciones: ['DISPONIBLE', 'MANTENIMIENTO', 'INHABILITADO'] }]}
-        inicial={{ estado: 'DISPONIBLE', tarifa_hora: 150 }}
+        inicial={{ estado: 'DISPONIBLE' }}
         columnas={[
             { key: 'codigo', label: 'Código', render: (f) => <strong>{f.codigo}</strong> },
             { key: 'nombre', label: 'Nombre' },
             { key: 'capacidad', label: 'Capacidad', render: (f) => `${f.capacidad} equipos` },
             { key: 'ubicacion', label: 'Ubicación' },
-            { key: 'tarifa_hora', label: 'Tarifa/hora', render: (f) => bs(f.tarifa_hora) },
             { key: 'estado', label: 'Estado', render: (f) => <Badge valor={f.estado} /> },
         ]}
         campos={[
             { name: 'codigo', label: 'Código', requerido: true, patron: /^[A-Za-z0-9-]{2,10}$/, mensajePatron: 'Use de 2 a 10 letras, números o guiones (ej: LAB-41).', mayusculas: true, placeholder: 'LAB-41' },
             { name: 'nombre', label: 'Nombre', requerido: true, min: 3, max: 60 },
             { name: 'capacidad', label: 'Capacidad', tipo: 'number', requerido: true, min: 1, max: 200, entero: true },
-            { name: 'tarifa_hora', label: 'Tarifa por hora (Bs)', tipo: 'number', requerido: true, min: 0, max: 10000, paso: '0.01' },
             { name: 'ubicacion', label: 'Ubicación', max: 100 },
             { name: 'estado', label: 'Estado', tipo: 'select', requerido: true, opciones: ['DISPONIBLE', 'MANTENIMIENTO', 'INHABILITADO'] },
         ]}
@@ -509,12 +507,17 @@ function BotonSeguridad({ fila }) {
     );
 }
 
-export const Usuarios = () => (
+export const Usuarios = () => {
+    const { avisos } = useAuth();
+    const solicitudes = avisos['/usuarios'] ?? 0;
+    return (
     <CrudPage
         titulo="Usuarios"
         descripcion="Cuentas del sistema y el rol que cumple cada una."
         endpoint="usuarios"
         singular="usuario"
+        aviso={solicitudes > 0 ? { texto: `${solicitudes} estudiante(s) solicitaron una cuenta y esperan su aprobación.`, filtro: { estado: 'PENDIENTE' } } : null}
+        resaltar={(f) => (f.estado === 'PENDIENTE' && !f.deleted_at ? 'Solicitud por aprobar' : null)}
         permisos={permisosDe('usuarios')}
         inicial={{ estado: 'ACTIVO' }}
         filtros={[
@@ -549,7 +552,8 @@ export const Usuarios = () => (
             },
         ]}
     />
-);
+    );
+};
 
 // ----------------------------------------------------------------- Conceptos de cobro
 export const Conceptos = () => (

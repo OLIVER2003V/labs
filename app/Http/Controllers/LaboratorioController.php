@@ -26,7 +26,6 @@ class LaboratorioController extends CrudController
             'capacidad' => ['required', 'integer', 'between:1,200'],
             'ubicacion' => ['nullable', 'string', 'max:100'],
             'estado' => ['required', Rule::in(['DISPONIBLE', 'MANTENIMIENTO', 'INHABILITADO'])],
-            'tarifa_hora' => ['required', 'numeric', 'between:0,10000'],
         ];
     }
 

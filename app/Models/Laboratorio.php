@@ -8,11 +8,11 @@ class Laboratorio extends Model
 {
     protected $table = 'laboratorios';
 
-    protected $fillable = ['codigo', 'nombre', 'capacidad', 'ubicacion', 'estado', 'tarifa_hora'];
+    protected $fillable = ['codigo', 'nombre', 'capacidad', 'ubicacion', 'estado'];
 
     protected function casts(): array
     {
-        return ['capacidad' => 'integer', 'tarifa_hora' => 'decimal:2'];
+        return ['capacidad' => 'integer'];
     }
 
     public function equipos(): \Illuminate\Database\Eloquent\Relations\HasMany

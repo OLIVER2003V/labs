@@ -109,7 +109,7 @@ const haceMinutos = (n) => {
  * CU10: filtrar los cambios "Directo en BD" (posible sabotaje), deshacer una modificación y restaurar en lote lo eliminado.
  */
 export function Auditoria() {
-    const { puede, refrescarAvisos } = useAuth();
+    const { puede, refrescarAvisos, avisos } = useAuth();
     const notificar = useToast();
     const [f, setF] = useState({ tabla: '', operacion: '', origen: '', desde: '', hasta: '' });
     const filtros = Object.fromEntries(Object.entries(f).filter(([, v]) => v));
@@ -164,6 +164,17 @@ export function Auditoria() {
                     </button>
                 )}
             </Encabezado>
+            {avisos['/auditoria'] > 0 && f.origen !== 'directo' && (
+                <div className="mb-4 flex flex-wrap items-center gap-3 rounded-tema border border-peligro bg-peligro-tenue p-3 text-sm text-peligro" role="alert">
+                    <AlertTriangle className="size-5 shrink-0" aria-hidden />
+                    <p className="min-w-0 flex-1 font-medium">
+                        {avisos['/auditoria']} cambio(s) en las últimas 24 h se hicieron directamente en la base de datos, fuera del sistema. Revise si fueron autorizados.
+                    </p>
+                    <button className="btn btn-sm btn-peligro" onClick={() => setF({ ...f, origen: 'directo', desde: new Date(Date.now() - 86400000).toISOString().slice(0, 10) })}>
+                        Ver solo esos
+                    </button>
+                </div>
+            )}
             <div className="tarjeta overflow-hidden">
                 <div className="flex flex-wrap gap-3 border-b border-borde p-3">
                     <select className="campo w-auto" aria-label="Origen" value={f.origen} onChange={(e) => setF({ ...f, origen: e.target.value })}>

@@ -25,6 +25,15 @@ export const Icono = ({ nombre, ...p }) => {
     return <I aria-hidden {...p} />;
 };
 
+/** Qué significa el número rojo de cada opción del menú (se muestra al pasar el mouse y lo lee el lector de pantalla) */
+export const SIGNIFICADO_AVISO = {
+    '/usuarios': 'solicitud(es) de cuenta por aprobar',
+    '/mensajes': 'mensaje(s) sin leer',
+    '/permutas': 'permuta(s) esperan su respuesta o aprobación',
+    '/multas': 'multa(s) por pagar',
+    '/auditoria': 'cambio(s) hechos directamente en la base de datos (últimas 24 h)',
+};
+
 /** Barra lateral: se arma con el menú que devuelve la API según los permisos del rol */
 function MenuLateral({ onNavegar }) {
     const { menu, avisos } = useAuth();
@@ -49,7 +58,12 @@ function MenuLateral({ onNavegar }) {
                                 >
                                     <Icono nombre={m.icono} className="size-[1.15rem] shrink-0" /> <span className="flex-1">{m.titulo}</span>
                                     {avisos[m.ruta] > 0 && (
-                                        <span className="rounded-full bg-acento px-2 py-0.5 text-xs font-bold text-white" title={`${avisos[m.ruta]} pendiente(s)`}>{avisos[m.ruta]}</span>
+                                        <span
+                                            className="rounded-full bg-acento px-2 py-0.5 text-xs font-bold text-white"
+                                            title={`${avisos[m.ruta]} ${SIGNIFICADO_AVISO[m.ruta] ?? 'pendiente(s)'}`}
+                                        >
+                                            {avisos[m.ruta]}<span className="sr-only"> {SIGNIFICADO_AVISO[m.ruta] ?? 'pendiente(s)'}</span>
+                                        </span>
                                     )}
                                 </NavLink>
                             </li>

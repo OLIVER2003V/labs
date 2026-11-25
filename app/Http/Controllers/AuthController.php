@@ -87,6 +87,7 @@ class AuthController extends Controller
 
         RateLimiter::clear($clave);
         $usuario->forceFill(['ultimo_acceso' => now()])->save();
+        $usuario->tokens()->where('expires_at', '<', now())->delete(); // limpia sus sesiones vencidas
         // El nombre del token guarda el dispositivo, para la lista de "sesiones activas"
         $token = $usuario->createToken(self::dispositivo($request), ['*'], now()->addHours(8))->plainTextToken;
 

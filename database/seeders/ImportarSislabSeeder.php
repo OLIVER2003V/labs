@@ -51,7 +51,7 @@ class ImportarSislabSeeder extends Seeder
 
         $this->lote('laboratorios', $s('laboratorio')->orderBy('id')->get()->map(fn ($l) => [
             'id' => $l->id, 'codigo' => $l->codigo, 'nombre' => $l->nombre, 'capacidad' => $l->capacidad,
-            'ubicacion' => $l->ubicacion, 'estado' => $l->estado, 'tarifa_hora' => 150, 'created_at' => now(), 'updated_at' => now(),
+            'ubicacion' => $l->ubicacion, 'estado' => $l->estado, 'created_at' => now(), 'updated_at' => now(),
         ]));
 
         $this->lote('semestres', $s('semestre')->orderBy('id')->get()->map(fn ($x) => (array) $x + ['created_at' => now(), 'updated_at' => now()]));

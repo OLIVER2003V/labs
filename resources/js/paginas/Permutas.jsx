@@ -101,8 +101,21 @@ function AccionesPermuta({ fila, recargar }) {
     );
 }
 
+/** Qué falta para que la permuta avance (se muestra bajo el estado) */
+function siguientePaso(f, yo, encargado) {
+    if (f.fecha < hoyISO() && ['PENDIENTE', 'ACEPTADA'].includes(f.estado)) return 'Venció sin completarse.';
+    if (f.estado === 'PENDIENTE') return f.reemplazante_id === yo ? 'Usted debe aceptar o rechazar.' : `Esperando que ${f.reemplazante?.nombre ?? 'el reemplazante'} acepte.`;
+    if (f.estado === 'ACEPTADA') return encargado ? 'Usted debe aprobarla o rechazarla.' : 'Falta la aprobación del Encargado.';
+    if (f.estado === 'APROBADA') return 'Ese día marca asistencia el reemplazante.';
+    return null;
+}
+
 export default function Permutas() {
-    const { puede } = useAuth();
+    const { puede, usuario, avisos } = useAuth();
+    const encargado = puede('permutas.aprobar');
+    const yo = usuario.id;
+    const porHacer = avisos['/permutas'] ?? 0;
+    const requiereAccion = (f) => f.fecha >= hoyISO() && ((f.estado === 'PENDIENTE' && f.reemplazante_id === yo) || (f.estado === 'ACEPTADA' && encargado));
     const solicita = puede('permutas.solicitar');
     const misTurnos = useOpciones(solicita ? 'mis_turnos' : null);
     const diaDelTurno = (valores) => misTurnos.find((t) => String(t.id) === String(valores.turno_id))?.dia_semana;
@@ -115,6 +128,13 @@ export default function Permutas() {
                 : 'Pida a otro auxiliar que cubra su turno en una fecha. Flujo: usted solicita → el reemplazante acepta → el Encargado aprueba. Ese día la asistencia la marca el reemplazante.'}
             endpoint="permutas"
             singular="permuta" femenino
+            aviso={porHacer > 0 ? {
+                texto: encargado
+                    ? `${porHacer} permuta(s) ya fueron aceptadas por el reemplazante y esperan su aprobación.`
+                    : `${porHacer} compañero(s) le piden cubrir su turno: acepte o rechace.`,
+                filtro: { accion: 1 },
+            } : null}
+            resaltar={(f) => (requiereAccion(f) ? 'Requiere su acción' : null)}
             permisos={{ crear: 'permutas.solicitar' }}
             inicial={{ fecha: '' }}
             filtros={[{ name: 'estado', label: 'Estado', opciones: ['PENDIENTE', 'ACEPTADA', 'APROBADA', 'RECHAZADA', 'CANCELADA'] }]}
@@ -131,7 +151,17 @@ export default function Permutas() {
                 { key: 'motivo', label: 'Motivo', render: (f) => <>{f.motivo}<span className="block text-xs text-suave">{fechaHora(f.created_at)}</span></> },
                 {
                     key: 'estado', label: 'Estado',
-                    render: (f) => <><Badge valor={f.estado} />{f.observacion && <span className="mt-1 block max-w-56 text-xs text-suave">{f.observacion}</span>}{f.aprobador && <span className="block text-xs text-suave">por {f.aprobador.nombre}</span>}</>,
+                    render: (f) => {
+                        const paso = siguientePaso(f, yo, encargado);
+                        return (
+                            <>
+                                <Badge valor={f.estado} />
+                                {paso && <span className={`mt-1 block max-w-56 text-xs ${requiereAccion(f) ? 'font-semibold text-acento' : 'text-suave'}`}>{paso}</span>}
+                                {f.observacion && <span className="mt-1 block max-w-56 text-xs text-suave">{f.observacion}</span>}
+                                {f.aprobador && <span className="block text-xs text-suave">por {f.aprobador.nombre}</span>}
+                            </>
+                        );
+                    },
                 },
             ]}
             acciones={(fila, recargar) => <AccionesPermuta fila={fila} recargar={recargar} />}

@@ -43,6 +43,12 @@ class PermutaController extends CrudController
         if (! $yo->tienePermiso('permutas.aprobar')) {
             $query->where(fn ($q) => $q->where('solicitante_id', $yo->id)->orWhere('reemplazante_id', $yo->id));
         }
+        // ?accion=1 → solo las que esperan algo de mí (lo que cuenta el número rojo del menú)
+        if ($request->boolean('accion')) {
+            $query->whereDate('fecha', '>=', now()->toDateString())
+                ->where(fn ($q) => $q->where(fn ($x) => $x->where('reemplazante_id', $yo->id)->where('estado', 'PENDIENTE'))
+                    ->when($yo->tienePermiso('permutas.aprobar'), fn ($x) => $x->orWhere('estado', 'ACEPTADA')));
+        }
 
         return $query->orderByDesc('id');
     }

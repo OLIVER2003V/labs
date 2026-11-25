@@ -67,7 +67,7 @@ function AccionesMulta({ fila, recargar, onPagar }) {
 }
 
 export default function Multas() {
-    const { puede } = useAuth();
+    const { puede, usuario } = useAuth();
     const gestiona = puede('multas.gestionar');
     const [resumen, setResumen] = useState(null);
     const [pago, setPago] = useState(null);
@@ -110,6 +110,10 @@ export default function Multas() {
                     : `Pague sus multas con tarjeta (Stripe). Tiene ${resumen?.dias_plazo ?? 7} días desde que se generan; si vencen, no podrá solicitar reservas ni permutas.`}
                 endpoint="multas"
                 singular="multa" femenino
+                aviso={resumen && !gestiona && resumen.pendientes > 0
+                    ? { texto: `Tiene ${resumen.pendientes} multa(s) por pagar (${bs(resumen.monto_pendiente)}).${resumen.vencidas ? ` ${resumen.vencidas} ya venció(eron).` : ''}`, filtro: { estado: 'PENDIENTE' } }
+                    : null}
+                resaltar={(f) => (f.estado === 'PENDIENTE' && f.usuario_id === usuario.id ? (f.vencida ? 'Vencida: páguela' : 'Por pagar') : null)}
                 recargarClave={recargar}
                 filtros={[
                     { name: 'estado', label: 'Estado', opciones: ['PENDIENTE', 'PAGADA', 'ANULADA'] },

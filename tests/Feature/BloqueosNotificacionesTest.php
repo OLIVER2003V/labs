@@ -93,7 +93,7 @@ class BloqueosNotificacionesTest extends SistemaTestCase
         $reserva = $this->reservaAprobada('LAB-43', $this->lunes()->toDateString());
         $lab = Laboratorio::where('codigo', 'LAB-43')->first();
         $this->como('encargado@ficct.edu.bo');
-        $datos = $lab->only(['codigo', 'nombre', 'capacidad', 'ubicacion', 'tarifa_hora']) + ['estado' => 'MANTENIMIENTO'];
+        $datos = $lab->only(['codigo', 'nombre', 'capacidad', 'ubicacion']) + ['estado' => 'MANTENIMIENTO'];
 
         $this->putJson("/api/laboratorios/{$lab->id}", $datos)->assertStatus(409)->assertJson(['requiere_confirmacion' => true]);
         $this->assertSame('DISPONIBLE', $lab->fresh()->estado);

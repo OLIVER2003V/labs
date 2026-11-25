@@ -1,6 +1,6 @@
 import { isValidElement, useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { FileSpreadsheet, Loader2, Pencil, Plus, Printer, Search, Trash2 } from 'lucide-react';
+import { BellRing, FileSpreadsheet, Loader2, Pencil, Plus, Printer, Search, Trash2 } from 'lucide-react';
 import api, { erroresCampos, mensajeError } from '../lib/api';
 import { excelDeTabla, imprimir } from '../lib/exportar';
 import { validar } from '../lib/validar';
@@ -24,9 +24,14 @@ function aTexto(nodo) {
  * Cada módulo solo describe sus columnas y campos (ver paginas/Modulos.jsx).
  * Los botones se muestran según los permisos del rol (puede('x.crear')), y el servidor vuelve a verificarlos.
  */
+/*
+ * aviso    = { texto, filtro }  → cartel arriba de la tabla ("Tiene 1 permuta por aprobar") con el botón "Ver solo esas",
+ *                                 que aplica ese filtro (ej: { accion: 1 }). Explica el número rojo del menú.
+ * resaltar = (fila) => texto | null → si devuelve texto, la fila se resalta con esa etiqueta (ej: "Requiere su acción").
+ */
 export default function CrudPage({
     titulo, descripcion, endpoint, permisos = {}, columnas, campos, filtros = [], inicial = {},
-    aFormulario, acciones, botonesExtra, singular = 'registro', femenino = false, recargarClave,
+    aFormulario, acciones, botonesExtra, singular = 'registro', femenino = false, recargarClave, aviso, resaltar,
 }) {
     const { puede } = useAuth();
     const notificar = useToast();
@@ -191,9 +196,32 @@ export default function CrudPage({
                 )}
             </Encabezado>
 
+            {aviso?.texto && (() => {
+                const activo = Object.entries(aviso.filtro ?? {}).every(([k, v]) => String(filtro[k] ?? '') === String(v));
+                return (
+                    <div className="mb-4 flex flex-wrap items-center gap-3 rounded-tema border border-acento bg-acento/10 p-3 text-sm" role="status">
+                        <BellRing className="size-5 shrink-0 text-acento" aria-hidden />
+                        <p className="min-w-0 flex-1 font-medium">{aviso.texto}</p>
+                        {aviso.filtro && (
+                            <button
+                                className={`btn btn-sm ${activo ? 'btn-secundario' : 'btn-primario'}`}
+                                onClick={() => {
+                                    setFiltro((x) => (activo
+                                        ? Object.fromEntries(Object.entries(x).filter(([k]) => !(k in aviso.filtro)))
+                                        : { ...x, ...aviso.filtro }));
+                                    setPagina(1);
+                                }}
+                            >
+                                {activo ? 'Ver todas' : 'Ver solo esas'}
+                            </button>
+                        )}
+                    </div>
+                );
+            })()}
+
             <div className="tarjeta overflow-hidden">
                 <div className="flex flex-wrap gap-3 border-b border-borde p-3">
-                    <div className="relative min-w-56 flex-1">
+                    <div className="relative min-w-0 flex-1 basis-56">
                         <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-suave" aria-hidden />
                         <input
                             className="campo pl-9"
@@ -241,9 +269,16 @@ export default function CrudPage({
                                 </tr>
                             </thead>
                             <tbody>
-                                {datos.data.map((fila) => (
-                                    <tr key={fila.id}>
-                                        {columnas.map((c) => <td key={c.key}>{c.render ? c.render(fila) : fila[c.key] ?? '—'}</td>)}
+                                {datos.data.map((fila) => {
+                                    const marca = resaltar?.(fila);
+                                    return (
+                                    <tr key={fila.id} className={marca ? 'bg-acento/10 [box-shadow:inset_3px_0_0_var(--c-acento)]' : ''}>
+                                        {columnas.map((c, i) => (
+                                            <td key={c.key}>
+                                                {i === 0 && marca && <span className="mb-1 block w-max rounded-full bg-acento px-2 py-0.5 text-[11px] font-bold text-white">{marca}</span>}
+                                                {c.render ? c.render(fila) : fila[c.key] ?? '—'}
+                                            </td>
+                                        ))}
                                         {(puedeEditar || puedeEliminar || acciones) && (
                                             <td>
                                                 <div className="flex justify-end gap-1">
@@ -262,7 +297,8 @@ export default function CrudPage({
                                             </td>
                                         )}
                                     </tr>
-                                ))}
+                                    );
+                                })}
                             </tbody>
                         </table>
                     </div>

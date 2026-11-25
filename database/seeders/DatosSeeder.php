@@ -83,10 +83,9 @@ class DatosSeeder extends Seeder
             ['LAB-46', 'Laboratorio 46 - Sistemas', 35, 'Módulo 236, piso 5', 'MANTENIMIENTO', 150],
             ['LAB-RED', 'Laboratorio de Redes Cisco', 25, 'Módulo 236, planta baja', 'DISPONIBLE', 250],
         ];
-        foreach ($lista as [$codigo, $nombre, $cap, $ubic, $estado, $tarifa]) {
+        foreach ($lista as [$codigo, $nombre, $cap, $ubic, $estado]) {
             $this->labs[$codigo] = DB::table('laboratorios')->insertGetId([
-                'codigo' => $codigo, 'nombre' => $nombre, 'capacidad' => $cap, 'ubicacion' => $ubic,
-                'estado' => $estado, 'tarifa_hora' => $tarifa,
+                'codigo' => $codigo, 'nombre' => $nombre, 'capacidad' => $cap, 'ubicacion' => $ubic, 'estado' => $estado,
             ] + $this->ahora());
         }
     }
@@ -318,9 +317,6 @@ class DatosSeeder extends Seeder
     public static function conceptosDePago(): array
     {
         $conceptos = [
-            ['ALQ-LAB-HORA', 'Alquiler de laboratorio por hora (evento externo)', 150],
-            ['MULTA-DANO', 'Multa por daño de equipo', 300],
-            ['MULTA-RETRASO', 'Multa por devolución tardía del laboratorio', 50],
             ['CERT-CURSO', 'Certificado de curso de capacitación', 80],
             ['CURSO-LARAVEL', 'Curso de Laravel + React (Sociedad Científica)', 450],
             ['REPO-CRED', 'Reposición de credencial de acceso', 25],
@@ -338,10 +334,10 @@ class DatosSeeder extends Seeder
         $c = self::conceptosDePago();
 
         $planes = [
-            ['docente@ficct.edu.bo', 'MULTA-DANO', 'Multa por daño de proyector PRY-43', 600, 3, 2],
-            ['director@ficct.edu.bo', 'ALQ-LAB-HORA', 'Alquiler LAB-41 para Hackathon FICCT (8 horas)', 1200, 4, 1],
+            ['docente@ficct.edu.bo', 'CURSO-LARAVEL', 'Curso de Laravel + React (cuotas)', 600, 3, 2],
+            ['director@ficct.edu.bo', 'CERT-CURSO', 'Certificados del curso de Docker (15)', 1200, 4, 1],
             ['auxiliar@ficct.edu.bo', 'CURSO-LARAVEL', 'Curso de Laravel + React - cohorte noviembre', 450, 3, 3],
-            ['jsuarez@ficct.edu.bo', 'MULTA-RETRASO', 'Devolución tardía del LAB-42', 50, 1, 0],
+            ['jsuarez@ficct.edu.bo', 'REPO-CRED', 'Reposición de credencial', 25, 1, 0],
             ['panez@ficct.edu.bo', 'CERT-CURSO', 'Certificados del curso de Docker (2)', 160, 2, 1],
             ['vflores@ficct.edu.bo', 'REPO-CRED', 'Reposición de credencial', 25, 1, 0],
         ];
@@ -377,8 +373,8 @@ class DatosSeeder extends Seeder
         }
 
         // Pagos únicos repartidos en el último mes (para el gráfico de ingresos)
-        $unicos = [['CERT-CURSO', 'panez@ficct.edu.bo'], ['REPO-CRED', 'auxiliar@ficct.edu.bo'], ['MULTA-RETRASO', 'docente@ficct.edu.bo'],
-            ['CURSO-LARAVEL', 'director@ficct.edu.bo'], ['CERT-CURSO', 'jsuarez@ficct.edu.bo'], ['ALQ-LAB-HORA', 'director@ficct.edu.bo']];
+        $unicos = [['CERT-CURSO', 'panez@ficct.edu.bo'], ['REPO-CRED', 'auxiliar@ficct.edu.bo'], ['REPO-CRED', 'docente@ficct.edu.bo'],
+            ['CURSO-LARAVEL', 'director@ficct.edu.bo'], ['CERT-CURSO', 'jsuarez@ficct.edu.bo'], ['CURSO-LARAVEL', 'panez@ficct.edu.bo']];
         for ($i = 0; $i < 16; $i++) {
             [$con, $email] = $unicos[$i % count($unicos)];
             $fecha = now()->subDays(mt_rand(0, 29))->setTime(mt_rand(8, 21), mt_rand(0, 59));
