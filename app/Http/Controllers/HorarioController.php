@@ -6,6 +6,11 @@ use App\Models\Horario;
 use App\Models\Semestre;
 use App\Models\User;
 use App\Services\Disponibilidad;
+use App\Services\ImportadorHorario;
+use App\Services\LectorHorario;
+use App\Models\Laboratorio;
+use Illuminate\Http\JsonResponse;
+use RuntimeException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
@@ -69,5 +74,59 @@ class HorarioController extends CrudController
         }
 
         return $datos;
+    }
+
+    /**
+     * POST /api/horarios/importar  (archivo .xlsx o .csv)
+     *   guardar=0 → solo revisa y devuelve el resultado fila por fila (vista previa)
+     *   guardar=1 → importa las filas válidas
+     * semestre_id opcional: por defecto el semestre activo (también sirve uno PLANIFICADO, para cargar el próximo).
+     */
+    public function importar(Request $request): JsonResponse
+    {
+        $request->validate([
+            'archivo' => ['required', 'file', 'max:2048', 'mimes:xlsx,csv,txt'],
+            'semestre_id' => ['nullable', 'integer', 'exists:semestres,id'],
+        ], ['archivo.mimes' => 'El archivo debe ser .xlsx (Excel) o .csv.', 'archivo.max' => 'El archivo no puede pesar más de 2 MB.'],
+            ['archivo' => 'archivo']);
+
+        $semestre = $request->filled('semestre_id') ? Semestre::findOrFail($request->integer('semestre_id')) : Semestre::activo();
+        abort_unless($semestre, 422, 'No hay un semestre activo. Elija el semestre al que pertenece el horario.');
+        abort_if($semestre->estado === 'CERRADO', 422, "El semestre {$semestre->gestion} está cerrado.");
+
+        try {
+            $filas = LectorHorario::leer($request->file('archivo')->getRealPath(), $request->file('archivo')->getClientOriginalName());
+        } catch (RuntimeException $e) {
+            abort(422, $e->getMessage());
+        }
+
+        $importador = new ImportadorHorario($semestre);
+        if (! $request->boolean('guardar')) {
+            return response()->json(['semestre' => $semestre->gestion] + $importador->revisar($filas));
+        }
+
+        $r = $importador->importar($filas);
+        abort_if($r['creadas'] === 0, 422, 'Ninguna fila es válida: no se importó nada.');
+
+        return response()->json([
+            'message' => "Se importaron {$r['creadas']} clase(s) al semestre {$semestre->gestion}"
+                .($r['materias_nuevas'] ? " y se registraron {$r['materias_nuevas']} materia(s) nueva(s)" : '')
+                .($r['errores'] ? ". {$r['errores']} fila(s) con errores no se importaron." : '.'),
+        ] + $r, 201);
+    }
+
+    /** GET /api/horarios/plantilla → Excel con el formato y dos filas de ejemplo con datos reales */
+    public function plantilla()
+    {
+        $labs = Laboratorio::where('estado', 'DISPONIBLE')->orderBy('codigo')->limit(2)->pluck('codigo')->all();
+        $docentes = User::whereHas('rol', fn ($r) => $r->where('codigo', 'DOC'))->where('estado', 'ACTIVO')->orderBy('id')->limit(2)->pluck('codigo')->all();
+        $ejemplos = [
+            [$labs[0] ?? 'LAB-41', 'LUNES', '07:00', '08:30', 'INF513', 'TECNOLOGIA WEB', 'SA', $docentes[0] ?? 'codigo del docente'],
+            [$labs[1] ?? 'LAB-42', 'MIERCOLES', '14:00', '15:30', 'INF412', 'SISTEMAS DE INFORMACION II', 'SB', $docentes[1] ?? 'correo@ficct.edu.bo'],
+        ];
+
+        return response()->download(LectorHorario::plantilla($ejemplos), 'plantilla_horario.xlsx', [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ])->deleteFileAfterSend();
     }
 }

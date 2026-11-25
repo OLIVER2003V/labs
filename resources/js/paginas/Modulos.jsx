@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Check, HandHelping, Lock, PlayCircle, RotateCcw, X } from 'lucide-react';
+import { Check, FileSpreadsheet, HandHelping, Lock, PlayCircle, RotateCcw, X } from 'lucide-react';
+import ImportarHorario from './ImportarHorario';
 import CrudPage from '../componentes/CrudPage';
 import { Badge, Confirmar, Formulario, Modal, useToast } from '../componentes/ui';
 import api, { erroresCampos, mensajeError } from '../lib/api';
@@ -164,8 +165,20 @@ export const FechasBloqueadas = () => (
 );
 
 // ----------------------------------------------------------------- Horario base
-export const Horarios = () => (
+export const Horarios = () => {
+    const { puede } = useAuth();
+    const [importar, setImportar] = useState(false);
+    const [recargar, setRecargar] = useState(0);
+    return (
+    <>
+    <ImportarHorario abierto={importar} onCerrar={() => setImportar(false)} onImportado={() => setRecargar((n) => n + 1)} />
     <CrudPage
+        recargarClave={recargar}
+        botonesExtra={() => puede('horarios.crear') && (
+            <button className="btn btn-secundario" onClick={() => setImportar(true)}>
+                <FileSpreadsheet className="size-4" aria-hidden /> Importar desde Excel
+            </button>
+        )}
         titulo="Horario base"
         descripcion="Clases semanales del semestre activo. El sistema rechaza choques de laboratorio o de docente."
         endpoint="horarios"
@@ -191,7 +204,9 @@ export const Horarios = () => (
             { name: 'hora_fin', label: 'Hora de fin', tipo: 'time', requerido: true, despuesDe: 'hora_inicio', validar: (v) => (v > '22:00' ? 'Los laboratorios cierran a las 22:00.' : null) },
         ]}
     />
-);
+    </>
+    );
+};
 
 // ----------------------------------------------------------------- Inventario
 const TIPOS_EQUIPO = ['COMPUTADORA', 'PROYECTOR', 'COMPONENTE', 'SOFTWARE', 'OTRO'];

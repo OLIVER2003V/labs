@@ -93,6 +93,8 @@ Route::middleware(['auth:sanctum', 'bitacora'])->group(function () {
     crud('materias', MateriaController::class, 'horarios', ['ver' => 'horarios.ver']);
 
     // Horarios, disponibilidad y reservas
+    Route::post('horarios/importar', [HorarioController::class, 'importar'])->middleware('permiso:horarios.crear');
+    Route::get('horarios/plantilla', [HorarioController::class, 'plantilla'])->middleware('permiso:horarios.crear');
     crud('horarios', HorarioController::class, 'horarios');
     Route::get('disponibilidad', [ReservaController::class, 'disponibilidad'])->middleware('permiso:disponibilidad.ver');
     Route::get('disponibilidad/agenda', [ReservaController::class, 'agenda'])->middleware('permiso:disponibilidad.ver');
