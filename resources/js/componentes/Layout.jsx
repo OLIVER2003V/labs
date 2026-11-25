@@ -12,6 +12,7 @@ import Footer from './Footer';
 import ErrorBoundary from './ErrorBoundary';
 import { LogoHorizontal } from './Logo';
 import Notificaciones from './Notificaciones';
+import { useMedia } from './ui';
 
 // Íconos disponibles para el menú (el nombre se guarda en la columna menus.icono)
 const ICONOS = {
@@ -77,6 +78,7 @@ function MenuLateral({ onNavegar }) {
 
 /** Búsqueda global predictiva (encabezado) */
 function BuscadorGlobal() {
+    const angosto = useMedia('(max-width: 639px)');
     const [q, setQ] = useState('');
     const [res, setRes] = useState([]);
     const [abierto, setAbierto] = useState(false);
@@ -117,12 +119,12 @@ function BuscadorGlobal() {
     };
 
     return (
-        <div ref={ref} className="relative w-full max-w-xl" role="search">
+        <div ref={ref} className="relative w-full max-w-xl min-w-0 flex-1" role="search">
             <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-suave" aria-hidden />
             <input
                 type="search"
                 className="campo rounded-full pl-9"
-                placeholder="Buscar laboratorios, equipos, materias, reservas…"
+                placeholder={angosto ? 'Buscar…' : 'Buscar laboratorios, equipos, materias, reservas…'}
                 aria-label="Búsqueda global"
                 aria-expanded={abierto}
                 aria-controls="resultados-busqueda"
@@ -197,7 +199,7 @@ export default function Layout() {
             {menuMovil && <div className="fixed inset-0 z-30 bg-black/40 lg:hidden" onClick={() => setMenuMovil(false)} />}
 
             {/* Encabezado */}
-            <header className="sticky top-0 z-20 flex h-[4.5rem] items-center gap-3 border-b border-borde bg-superficie/95 px-4 backdrop-blur">
+            <header className="sticky top-0 z-20 flex h-[4.5rem] items-center gap-2 border-b border-borde bg-superficie/95 px-3 backdrop-blur sm:gap-3 sm:px-4">
                 <button className="btn btn-fantasma btn-sm lg:hidden" onClick={() => setMenuMovil(true)} aria-label="Abrir menú">
                     <MenuIcon className="size-5" />
                 </button>

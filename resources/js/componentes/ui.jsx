@@ -103,6 +103,19 @@ export function Confirmar({ abierto, titulo = '¿Está seguro?', mensaje, onConf
     );
 }
 
+/** true si la pantalla cumple la media query (ej: '(max-width: 767px)'); se actualiza al girar o cambiar el tamaño */
+export function useMedia(consulta) {
+    const [cumple, setCumple] = useState(() => typeof window !== 'undefined' && window.matchMedia(consulta).matches);
+    useEffect(() => {
+        const m = window.matchMedia(consulta);
+        const alCambiar = () => setCumple(m.matches);
+        alCambiar();
+        m.addEventListener('change', alCambiar);
+        return () => m.removeEventListener('change', alCambiar);
+    }, [consulta]);
+    return cumple;
+}
+
 /* ===================== Campo de formulario ===================== */
 const cacheOpciones = {};
 /** Carga listas para selects desde /api/opciones/{tipo} */

@@ -4,7 +4,7 @@ import { CalendarRange, ClipboardCheck, FileSpreadsheet, Gavel, Loader2, Printer
 import api, { mensajeError } from '../lib/api';
 import { excelDeReporte, imprimir } from '../lib/exportar';
 import { Cargando, Encabezado, Tarjeta, useOpciones, useToast } from '../componentes/ui';
-import { useColores } from './Dashboard';
+import { compacto, estilos, useColores } from '../componentes/Graficos';
 
 /*
  * CU8 - Reportes (REPOCU, REPRES, REPINC, REPASI, ESTSEM del proyecto 1).
@@ -19,8 +19,9 @@ const REPORTES = [
     { tipo: 'multas', titulo: 'Multas', icono: Gavel, ayuda: 'Multas por atraso, falta y reserva no utilizada: cobrado, por cobrar y usuarios bloqueados.' },
     { tipo: 'semestre', titulo: 'Semestre', icono: CalendarRange, ayuda: 'Indicadores generales de un semestre: horario base, reservas, incidencias, permutas…' },
 ];
-const SERIES_COLOR = ['primario', 'acento', 'peligro', 'info', 'alerta', 'exito'];
-const COLOR_SERIE = { pagado: 'exito', pendiente: 'alerta', puntual: 'exito', atraso: 'alerta', falta: 'peligro', permiso: 'info', aprobadas: 'exito', resueltas: 'exito', abiertas: 'peligro', otras: 'suave' };
+// Series sin significado de estado → colores de serie en orden fijo; las que SÍ son estados (puntual, falta…) usan su color de estado
+const SERIES_COLOR = ['serie1', 'serie2', 'serie3'];
+const COLOR_SERIE = { clase: 'serie1', reserva: 'serie2', horas: 'serie1', pagado: 'exito', pendiente: 'alerta', puntual: 'exito', atraso: 'alerta', falta: 'peligro', permiso: 'info', aprobadas: 'exito', resueltas: 'exito', abiertas: 'peligro', otras: 'suave' };
 
 const esNumero = (v) => typeof v === 'number';
 const formato = (v, columna) => (esNumero(v) ? `${v.toLocaleString('es-BO')}${columna?.startsWith('%') ? ' %' : ''}` : v);
@@ -86,7 +87,7 @@ export default function Reportes() {
         }
     };
 
-    const ejes = { stroke: c.suave, fontSize: 12 };
+    const { ejes } = estilos(c);
     const g = r?.grafico;
 
     return (
@@ -151,23 +152,24 @@ export default function Reportes() {
                         <Tarjeta titulo="Gráfico">
                             <ResponsiveContainer width="100%" height={300}>
                                 <BarChart data={g.datos}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke={c.borde} />
+                                    <CartesianGrid {...estilos(c).grilla} />
                                     <XAxis dataKey="nombre" {...ejes} interval={0} angle={g.datos.length > 6 ? -30 : 0} textAnchor={g.datos.length > 6 ? 'end' : 'middle'} height={g.datos.length > 6 ? 60 : 30} />
-                                    <YAxis {...ejes} unit={g.unidad ? ` ${g.unidad}` : ''} />
-                                    <Tooltip contentStyle={{ background: c.superficie, border: `1px solid ${c.borde}`, borderRadius: 8, color: c.texto }} />
-                                    <Legend />
+                                    <YAxis {...ejes} width={56} unit={g.unidad === '%' ? ' %' : ''} tickFormatter={(v) => (g.unidad === 'Bs' ? `Bs ${compacto(v)}` : compacto(v))} />
+                                    <Tooltip {...estilos(c).tooltip} formatter={(v, n) => [g.unidad === 'Bs' ? `Bs ${Number(v).toLocaleString('es-BO')}` : `${v}${g.unidad === '%' ? ' %' : ''}`, n]} />
+                                    {g.series.length > 1 && <Legend {...estilos(c).leyenda} />}
                                     {g.series.map(([clave, etiqueta], i) => (
                                         <Bar key={clave} dataKey={clave} name={etiqueta} stackId={g.apilado ? 'a' : undefined}
-                                            fill={c[COLOR_SERIE[clave] ?? SERIES_COLOR[i % SERIES_COLOR.length]]} radius={g.apilado ? 0 : [4, 4, 0, 0]} />
+                                            fill={c[COLOR_SERIE[clave] ?? SERIES_COLOR[Math.min(i, SERIES_COLOR.length - 1)]]} stroke={g.apilado ? c.superficie : undefined} strokeWidth={g.apilado ? 1 : 0}
+                                            radius={!g.apilado || i === g.series.length - 1 ? [4, 4, 0, 0] : 0} />
                                     ))}
                                 </BarChart>
                             </ResponsiveContainer>
                         </Tarjeta>
                     )}
 
-                    <div className="grid gap-5 xl:grid-cols-2">
+                    <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
                         {r.secciones.map((s, i) => (
-                            <div key={s.titulo} className={s.columnas.length > 5 || i === 0 ? 'xl:col-span-2' : ''}><Tabla s={s} /></div>
+                            <div key={s.titulo} className={`min-w-0 ${s.columnas.length > 5 || i === 0 ? 'xl:col-span-2' : ''}`}><Tabla s={s} /></div>
                         ))}
                     </div>
                 </div>

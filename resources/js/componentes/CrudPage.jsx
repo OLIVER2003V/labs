@@ -1,11 +1,11 @@
-import { isValidElement, useCallback, useEffect, useState } from 'react';
+import { Fragment, isValidElement, useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { BellRing, FileSpreadsheet, Loader2, Pencil, Plus, Printer, Search, Trash2 } from 'lucide-react';
 import api, { erroresCampos, mensajeError } from '../lib/api';
 import { excelDeTabla, imprimir } from '../lib/exportar';
 import { validar } from '../lib/validar';
 import { useAuth } from '../contexto/AuthContext';
-import { Cargando, Confirmar, Encabezado, Formulario, Modal, Paginacion, useToast, Vacio } from './ui';
+import { Cargando, Confirmar, Encabezado, Formulario, Modal, Paginacion, useMedia, useToast, Vacio } from './ui';
 
 /** Convierte lo que muestra una celda (texto o JSX) en texto plano, para exportar */
 function aTexto(nodo) {
@@ -30,7 +30,7 @@ function aTexto(nodo) {
  * resaltar = (fila) => texto | null → si devuelve texto, la fila se resalta con esa etiqueta (ej: "Requiere su acción").
  */
 export default function CrudPage({
-    titulo, descripcion, endpoint, permisos = {}, columnas, campos, filtros = [], inicial = {},
+    titulo, descripcion, endpoint, permisos = {}, columnas, campos = [], filtros = [], inicial = {},
     aFormulario, acciones, botonesExtra, singular = 'registro', femenino = false, recargarClave, aviso, resaltar,
 }) {
     const { puede } = useAuth();
@@ -178,6 +178,24 @@ export default function CrudPage({
 
     const puedeEditar = permisos.editar && puede(permisos.editar);
     const puedeEliminar = permisos.eliminar && puede(permisos.eliminar);
+    const hayAcciones = puedeEditar || puedeEliminar || acciones;
+    const celular = useMedia('(max-width: 767px)'); // en celular cada fila se muestra como tarjeta (la tabla no entra)
+    const etiquetaMarca = (marca) => marca && <span className="mb-1 block w-max rounded-full bg-acento px-2 py-0.5 text-[11px] font-bold text-white">{marca}</span>;
+    const botonesDe = (fila) => (
+        <>
+            {acciones?.(fila, cargar)}
+            {puedeEditar && !fila.deleted_at && (
+                <button className="btn btn-fantasma btn-sm" onClick={() => abrir(fila)} title="Editar" aria-label={`Editar ${singular} ${fila.id}`}>
+                    <Pencil className="size-4" />
+                </button>
+            )}
+            {puedeEliminar && !fila.deleted_at && (
+                <button className="btn btn-fantasma btn-sm text-peligro" onClick={() => setBorrar(fila)} title="Eliminar" aria-label={`Eliminar ${singular} ${fila.id}`}>
+                    <Trash2 className="size-4" />
+                </button>
+            )}
+        </>
+    );
 
     return (
         <>
@@ -259,13 +277,33 @@ export default function CrudPage({
                     <Cargando />
                 ) : !datos?.data?.length ? (
                     <Vacio texto={q ? `No se encontraron resultados para "${q}".` : undefined} />
+                ) : celular ? (
+                    <ul className={`divide-y divide-borde ${cargando ? 'opacity-60' : ''}`}>
+                        {datos.data.map((fila) => {
+                            const marca = resaltar?.(fila);
+                            return (
+                                <li key={fila.id} className={`p-4 ${marca ? 'bg-acento/10 [box-shadow:inset_3px_0_0_var(--c-acento)]' : ''}`}>
+                                    {etiquetaMarca(marca)}
+                                    <dl className="grid grid-cols-[6.5rem_1fr] gap-x-3 gap-y-2 text-sm">
+                                        {columnas.map((c) => (
+                                            <Fragment key={c.key}>
+                                                <dt className="pt-0.5 text-xs font-semibold tracking-wide text-suave uppercase">{c.label}</dt>
+                                                <dd className="min-w-0 break-words">{c.render ? c.render(fila) : fila[c.key] ?? '—'}</dd>
+                                            </Fragment>
+                                        ))}
+                                    </dl>
+                                    {hayAcciones && <div className="mt-3 flex flex-wrap justify-end gap-1 border-t border-borde pt-2">{botonesDe(fila)}</div>}
+                                </li>
+                            );
+                        })}
+                    </ul>
                 ) : (
                     <div className={`overflow-x-auto ${cargando ? 'opacity-60' : ''}`}>
                         <table className="tabla w-full text-sm">
                             <thead>
                                 <tr>
                                     {columnas.map((c) => <th key={c.key} scope="col">{c.label}</th>)}
-                                    {(puedeEditar || puedeEliminar || acciones) && <th scope="col" className="text-right">Acciones</th>}
+                                    {hayAcciones && <th scope="col" className="text-right">Acciones</th>}
                                 </tr>
                             </thead>
                             <tbody>
@@ -275,25 +313,13 @@ export default function CrudPage({
                                     <tr key={fila.id} className={marca ? 'bg-acento/10 [box-shadow:inset_3px_0_0_var(--c-acento)]' : ''}>
                                         {columnas.map((c, i) => (
                                             <td key={c.key}>
-                                                {i === 0 && marca && <span className="mb-1 block w-max rounded-full bg-acento px-2 py-0.5 text-[11px] font-bold text-white">{marca}</span>}
+                                                {i === 0 && etiquetaMarca(marca)}
                                                 {c.render ? c.render(fila) : fila[c.key] ?? '—'}
                                             </td>
                                         ))}
-                                        {(puedeEditar || puedeEliminar || acciones) && (
+                                        {hayAcciones && (
                                             <td>
-                                                <div className="flex justify-end gap-1">
-                                                    {acciones?.(fila, cargar)}
-                                                    {puedeEditar && !fila.deleted_at && (
-                                                        <button className="btn btn-fantasma btn-sm" onClick={() => abrir(fila)} title="Editar" aria-label={`Editar ${singular} ${fila.id}`}>
-                                                            <Pencil className="size-4" />
-                                                        </button>
-                                                    )}
-                                                    {puedeEliminar && !fila.deleted_at && (
-                                                        <button className="btn btn-fantasma btn-sm text-peligro" onClick={() => setBorrar(fila)} title="Eliminar" aria-label={`Eliminar ${singular} ${fila.id}`}>
-                                                            <Trash2 className="size-4" />
-                                                        </button>
-                                                    )}
-                                                </div>
+                                                <div className="flex justify-end gap-1">{botonesDe(fila)}</div>
                                             </td>
                                         )}
                                     </tr>

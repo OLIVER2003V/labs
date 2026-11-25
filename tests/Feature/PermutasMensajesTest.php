@@ -116,6 +116,24 @@ class PermutasMensajesTest extends SistemaTestCase
         $this->solicitar()->assertCreated(); // cancelada ya no ocupa el turno
     }
 
+    public function test_el_numero_del_menu_coincide_con_ver_solo_las_que_requieren_accion(): void
+    {
+        $this->como('auxiliar@ficct.edu.bo');
+        $id = $this->solicitar()->assertCreated()->json('data.id');
+
+        // Para el reemplazante: 1 por responder, y "Ver solo esas" (?accion=1) muestra exactamente esa
+        $this->como('vflores@ficct.edu.bo');
+        $this->getJson('/api/notificaciones')->assertJsonPath('avisos./permutas', 1);
+        $this->assertSame([$id], array_column($this->getJson('/api/permutas?accion=1')->json('data'), 'id'));
+
+        // Al aceptarla pasa a esperar al Encargado: deja de contar para el auxiliar y cuenta para el Encargado
+        $this->putJson("/api/permutas/$id/responder", ['aceptar' => true])->assertOk();
+        $this->getJson('/api/notificaciones')->assertJsonPath('avisos./permutas', 0);
+        $this->como('encargado@ficct.edu.bo');
+        $this->getJson('/api/notificaciones')->assertJsonPath('avisos./permutas', 1);
+        $this->assertSame([$id], array_column($this->getJson('/api/permutas?accion=1')->json('data'), 'id'));
+    }
+
     public function test_chat_entre_auxiliar_y_encargado(): void
     {
         $enc = $this->id('encargado@ficct.edu.bo');

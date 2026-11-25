@@ -101,6 +101,17 @@ export function ResultadoPago() {
         };
     }, [id, cancelado, refrescarAvisos]);
 
+    if (!id) {
+        return (
+            <div className="mx-auto max-w-lg">
+                <div className="tarjeta p-8 text-center">
+                    <p className="text-lg font-semibold">No hay ningún pago para mostrar.</p>
+                    <p className="mt-1 text-sm text-suave">Esta pantalla se abre sola al volver de la página de pago de Stripe.</p>
+                    <button className="btn btn-primario mt-4" onClick={() => navegar('/pagos')}>Ir a Pagos</button>
+                </div>
+            </div>
+        );
+    }
     const trx = r?.data;
     const ok = trx?.estado === 'APROBADA';
     const esperando = trx?.estado === 'PENDIENTE' && !cancelado && intentos < 15;
