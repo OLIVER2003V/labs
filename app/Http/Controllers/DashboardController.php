@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\Reportes;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -39,17 +40,10 @@ class DashboardController extends Controller
                 ->whereBetween('fecha', [$desde, $hasta])->groupBy('estado')->get(),
             'reservas_por_tipo' => DB::table('reservas')->selectRaw('tipo, COUNT(*) AS total')
                 ->whereBetween('fecha', [$desde, $hasta])->groupBy('tipo')->get(),
-            // Horas ocupadas por laboratorio: clases semanales + reservas aprobadas del periodo
-            'ocupacion_laboratorios' => DB::select("
-                SELECT l.codigo,
-                       COALESCE((SELECT SUM(EXTRACT(EPOCH FROM (h.hora_fin - h.hora_inicio)) / 3600)
-                                   FROM horarios h JOIN semestres s ON s.id = h.semestre_id AND s.estado = 'ACTIVO'
-                                  WHERE h.laboratorio_id = l.id), 0)::numeric(10,1) AS horas_clase_semana,
-                       COALESCE((SELECT SUM(EXTRACT(EPOCH FROM (r.hora_fin - r.hora_inicio)) / 3600)
-                                   FROM reservas r WHERE r.laboratorio_id = l.id AND r.estado = 'APROBADA'
-                                    AND r.fecha BETWEEN ? AND ?), 0)::numeric(10,1) AS horas_reserva
-                  FROM laboratorios l ORDER BY l.codigo", [$desde, $hasta]),
-            'incidencias_por_estado' => DB::table('incidencias')->selectRaw('estado, COUNT(*) AS total')->groupBy('estado')->get(),
+            // % de ocupación por laboratorio en el periodo: el mismo cálculo del reporte de ocupación (CU8)
+            'ocupacion_laboratorios' => Reportes::ocupacion($desde, $hasta)['grafico']['datos'],
+            'incidencias_por_estado' => DB::table('incidencias')->selectRaw('estado, COUNT(*) AS total')
+                ->whereBetween(DB::raw('created_at::date'), [$desde, $hasta])->groupBy('estado')->get(),
             'ingresos_por_dia' => DB::table('transacciones')
                 ->selectRaw("TO_CHAR(created_at::date, 'YYYY-MM-DD') AS dia, SUM(monto) AS total, COUNT(*) AS cantidad")
                 ->where('estado', 'APROBADA')->whereBetween(DB::raw('created_at::date'), [$desde, $hasta])

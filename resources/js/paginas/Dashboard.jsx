@@ -9,7 +9,7 @@ import { useTema } from '../contexto/TemaContext';
 import { Cargando, Encabezado, Tarjeta, useToast } from '../componentes/ui';
 
 /** Lee los colores del tema actual (variables CSS) para que los gráficos cambien con el tema */
-function useColores() {
+export function useColores() {
     const { tema, modoReal, contraste } = useTema();
     const [c, setC] = useState({});
     useEffect(() => {
@@ -85,16 +85,16 @@ export default function Dashboard() {
             </div>
 
             <div className="mt-5 grid gap-5 lg:grid-cols-2">
-                <Tarjeta titulo="Ocupación por laboratorio (horas)">
+                <Tarjeta titulo="Ocupación por laboratorio (% de las horas hábiles)">
                     <ResponsiveContainer width="100%" height={280}>
-                        <BarChart data={d.ocupacion_laboratorios.map((x) => ({ ...x, horas_clase_semana: Number(x.horas_clase_semana), horas_reserva: Number(x.horas_reserva) }))}>
+                        <BarChart data={d.ocupacion_laboratorios}>
                             <CartesianGrid strokeDasharray="3 3" stroke={c.borde} />
-                            <XAxis dataKey="codigo" {...ejes} interval={0} angle={-30} textAnchor="end" height={50} />
-                            <YAxis {...ejes} />
+                            <XAxis dataKey="nombre" {...ejes} interval={0} angle={-30} textAnchor="end" height={50} />
+                            <YAxis {...ejes} unit=" %" />
                             <Tooltip {...tooltip} />
                             <Legend />
-                            <Bar dataKey="horas_clase_semana" name="Clases por semana" fill={c.primario} radius={[4, 4, 0, 0]} />
-                            <Bar dataKey="horas_reserva" name="Reservas en el periodo" fill={c.acento} radius={[4, 4, 0, 0]} />
+                            <Bar dataKey="clase" name="Clases (%)" stackId="o" fill={c.primario} />
+                            <Bar dataKey="reserva" name="Reservas (%)" stackId="o" fill={c.acento} radius={[4, 4, 0, 0]} />
                         </BarChart>
                     </ResponsiveContainer>
                 </Tarjeta>

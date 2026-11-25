@@ -18,6 +18,7 @@ import { MetodosPago, MisPagos, PlanesPago } from './paginas/Pagos';
 import Perfil from './paginas/Perfil';
 import Permutas from './paginas/Permutas';
 import Mensajes from './paginas/Mensajes';
+import Reportes from './paginas/Reportes';
 import {
     Conceptos, Equipos, FechasBloqueadas, Horarios, Incidencias, Laboratorios, Materias, Objetos, Semestres, Turnos, Usuarios,
 } from './paginas/Modulos';
@@ -38,6 +39,7 @@ function App() {
     // Rutas del frontend → permiso requerido (deben coincidir con la tabla menus)
     const rutas = [
         ['/dashboard', Dashboard, 'dashboard.ver'],
+        ['/reportes', Reportes, 'reportes.ver'],
         ['/disponibilidad', Disponibilidad, 'disponibilidad.ver'],
         ['/reservas', Reservas, 'reservas.ver'],
         ['/horarios', Horarios, 'horarios.ver'],

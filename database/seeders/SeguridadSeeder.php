@@ -13,6 +13,7 @@ class SeguridadSeeder extends Seeder
     /** recurso => [accion => descripción] */
     const PERMISOS = [
         'dashboard' => ['ver' => 'Ver el panel de estadísticas'],
+        'reportes' => ['ver' => 'Ver y exportar los reportes (ocupación, reservas, incidencias, asistencia, semestre)'],
         'usuarios' => ['ver' => 'Listar usuarios', 'crear' => 'Registrar usuarios', 'editar' => 'Modificar usuarios', 'eliminar' => 'Eliminar usuarios'],
         'roles' => ['ver' => 'Ver roles y matriz de acceso', 'editar' => 'Crear/editar roles y asignar permisos'],
         'bitacora' => ['ver' => 'Ver bitácora de accesos'],
@@ -45,7 +46,7 @@ class SeguridadSeeder extends Seeder
 
     /** Permisos por rol de negocio (el ADM recibe todos) */
     const ROL_PERMISOS = [
-        'ENC' => ['dashboard.ver', 'usuarios.ver', 'usuarios.crear', 'usuarios.editar', 'bitacora.ver',
+        'ENC' => ['dashboard.ver', 'reportes.ver', 'usuarios.ver', 'usuarios.crear', 'usuarios.editar', 'bitacora.ver',
             'laboratorios.*', 'semestres.*', 'horarios.*', 'disponibilidad.ver', 'reservas.*', 'equipos.*',
             'incidencias.*', 'objetos.*', 'turnos.*', 'asistencia.ver', 'asistencia.gestionar', 'permutas.ver', 'permutas.aprobar', 'mensajes.usar',
             'pagos.*', 'planes.gestionar', 'conceptos.*'],
@@ -56,7 +57,7 @@ class SeguridadSeeder extends Seeder
             'asistencia.marcar', 'pagos.ver', 'pagos.pagar', 'permutas.ver', 'permutas.solicitar', 'mensajes.usar'],
         // Se registra solo desde el login; el Encargado aprueba la cuenta
         'EST' => ['laboratorios.ver', 'disponibilidad.ver', 'reservas.ver', 'reservas.crear', 'reservas.cancelar'],
-        'DIR' => ['dashboard.ver', 'laboratorios.ver', 'horarios.ver', 'disponibilidad.ver', 'reservas.ver', 'reservas.ver_todas',
+        'DIR' => ['dashboard.ver', 'reportes.ver', 'laboratorios.ver', 'horarios.ver', 'disponibilidad.ver', 'reservas.ver', 'reservas.ver_todas',
             'reservas.crear', 'reservas.cancelar', 'equipos.ver', 'incidencias.ver', 'pagos.ver', 'pagos.pagar', 'pagos.ver_todos'],
     ];
 
@@ -64,6 +65,7 @@ class SeguridadSeeder extends Seeder
     const MENU = [
         ['General', 'Inicio', '/', 'Home', null],
         ['General', 'Panel de estadísticas', '/dashboard', 'BarChart3', 'dashboard.ver'],
+        ['General', 'Reportes', '/reportes', 'FileSpreadsheet', 'reportes.ver'],
         ['General', 'Mensajes', '/mensajes', 'MessagesSquare', 'mensajes.usar'],
         ['Horarios y reservas', 'Disponibilidad', '/disponibilidad', 'CalendarSearch', 'disponibilidad.ver'],
         ['Horarios y reservas', 'Reservas', '/reservas', 'CalendarCheck', 'reservas.ver'],

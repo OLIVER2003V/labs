@@ -1,7 +1,8 @@
 import { isValidElement, useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Download, Loader2, Pencil, Plus, Search, Trash2 } from 'lucide-react';
+import { FileSpreadsheet, Loader2, Pencil, Plus, Printer, Search, Trash2 } from 'lucide-react';
 import api, { erroresCampos, mensajeError } from '../lib/api';
+import { excelDeTabla, imprimir } from '../lib/exportar';
 import { validar } from '../lib/validar';
 import { useAuth } from '../contexto/AuthContext';
 import { Cargando, Confirmar, Encabezado, Formulario, Modal, Paginacion, useToast, Vacio } from './ui';
@@ -44,9 +45,13 @@ export default function CrudPage({
     const [alternativas, setAlternativas] = useState(null); // ante un choque: otros laboratorios libres [{id, codigo, nombre, campo}]
     const [exportando, setExportando] = useState(false);
 
-    /** Exporta a CSV (Excel) TODOS los registros del filtro actual, no solo la página visible */
-    const exportar = async () => {
-        setExportando(true);
+    /**
+     * Exporta TODOS los registros del filtro actual (no solo la página visible), en cuadros:
+     *   formato 'excel' → .xlsx con encabezado de color y bordes (lo arma el servidor)
+     *   formato 'pdf'   → hoja de reporte para imprimir o "Guardar como PDF"
+     */
+    const exportar = async (formato) => {
+        setExportando(formato);
         try {
             let filas = [];
             for (let p = 1, ultima = 1; p <= ultima && p <= 50; p++) {
@@ -54,17 +59,22 @@ export default function CrudPage({
                 filas = filas.concat(data.data);
                 ultima = data.last_page;
             }
-            const celda = (v) => `"${String(v).replace(/"/g, '""').replace(/\s+/g, ' ').trim()}"`;
-            const lineas = [columnas.map((c) => celda(c.label)).join(';')]
-                .concat(filas.map((f) => columnas.map((c) => celda(aTexto(c.render ? c.render(f) : f[c.key] ?? ''))).join(';')));
-            // ﻿ (BOM) para que Excel lea bien las tildes; separador ";" (configuración regional de Bolivia)
-            const blob = new Blob(['﻿' + lineas.join('\r\n')], { type: 'text/csv;charset=utf-8' });
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = `${endpoint}_${new Date().toISOString().slice(0, 10)}.csv`;
-            a.click();
-            URL.revokeObjectURL(a.href);
-            notificar(`Se exportaron ${filas.length} registro(s).`);
+            const tabla = {
+                titulo,
+                subtitulo: [
+                    q && `Búsqueda: "${q}"`,
+                    ...filtros.filter((f) => filtro[f.name]).map((f) => `${f.label}: ${String(filtro[f.name]).replaceAll('_', ' ')}`),
+                    `${filas.length} registro(s)`,
+                ].filter(Boolean).join(' · '),
+                columnas: columnas.map((c) => c.label),
+                filas: filas.map((f) => columnas.map((c) => aTexto(c.render ? c.render(f) : f[c.key] ?? '').replace(/\s+/g, ' ').trim())),
+            };
+            if (formato === 'excel') {
+                await excelDeTabla(tabla);
+                notificar(`Se exportaron ${filas.length} registro(s) a Excel.`);
+            } else {
+                imprimir({ titulo: tabla.titulo, subtitulo: tabla.subtitulo, secciones: [{ columnas: tabla.columnas, filas: tabla.filas }] });
+            }
         } catch (e) {
             notificar(mensajeError(e), 'error');
         } finally {
@@ -168,8 +178,11 @@ export default function CrudPage({
         <>
             <Encabezado titulo={titulo} descripcion={descripcion}>
                 {botonesExtra?.(cargar)}
-                <button className="btn btn-secundario" onClick={exportar} disabled={exportando || !datos?.total} title="Descargar en formato CSV (Excel)">
-                    {exportando ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <Download className="size-4" aria-hidden />} Exportar
+                <button className="btn btn-secundario" onClick={() => exportar('excel')} disabled={!!exportando || !datos?.total} title="Descargar en Excel (con formato)">
+                    {exportando === 'excel' ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <FileSpreadsheet className="size-4" aria-hidden />} Excel
+                </button>
+                <button className="btn btn-secundario" onClick={() => exportar('pdf')} disabled={!!exportando || !datos?.total} title="Imprimir o guardar como PDF">
+                    {exportando === 'pdf' ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <Printer className="size-4" aria-hidden />} PDF
                 </button>
                 {permisos.crear && puede(permisos.crear) && (
                     <button className="btn btn-primario" onClick={() => abrir()}>

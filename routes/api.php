@@ -18,6 +18,7 @@ use App\Http\Controllers\ObjetoEncontradoController;
 use App\Http\Controllers\PagoController;
 use App\Http\Controllers\PagoQrController;
 use App\Http\Controllers\PermutaController;
+use App\Http\Controllers\ReporteController;
 use App\Http\Controllers\ReservaController;
 use App\Http\Controllers\RolController;
 use App\Http\Controllers\SemestreController;
@@ -70,6 +71,11 @@ Route::middleware(['auth:sanctum', 'bitacora'])->group(function () {
     Route::get('opciones/{tipo}', [GeneralController::class, 'opciones']);
 
     Route::get('dashboard', [DashboardController::class, 'index'])->middleware('permiso:dashboard.ver');
+
+    // CU8 - Reportes (pantalla, Excel con formato) y exportación de cualquier lista a Excel
+    Route::get('reportes/{tipo}', [ReporteController::class, 'mostrar'])->middleware('permiso:reportes.ver');
+    Route::get('reportes/{tipo}/excel', [ReporteController::class, 'excel'])->middleware('permiso:reportes.ver');
+    Route::post('exportar/excel', [ReporteController::class, 'exportarExcel'])->middleware('throttle:20,1');
 
     // Administración
     crud('usuarios', UsuarioController::class, 'usuarios');
