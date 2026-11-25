@@ -46,9 +46,13 @@ export default function Dashboard() {
 
     useEffect(() => {
         if (rango.desde && rango.hasta && rango.desde > rango.hasta) return; // rango inválido: no consultar
+        let vigente = true; // ignora respuestas de un rango anterior si el usuario cambió las fechas
         api.get('/dashboard', { params: { desde: rango.desde || undefined, hasta: rango.hasta || undefined } })
-            .then((r) => setD(r.data))
-            .catch((e) => notificar(mensajeError(e), 'error'));
+            .then((r) => vigente && setD(r.data))
+            .catch((e) => vigente && notificar(mensajeError(e), 'error'));
+        return () => {
+            vigente = false;
+        };
     }, [rango.desde, rango.hasta, notificar]);
 
     if (!d || !c.primario) return <Cargando />;

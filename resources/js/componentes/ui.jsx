@@ -141,6 +141,23 @@ export function Campo({ campo, valor, onChange, error, valores = {} }) {
         );
     } else if (campo.tipo === 'textarea') {
         control = <textarea {...comunes} rows={3} className={clase} value={valor ?? ''} maxLength={campo.max} onChange={(e) => onChange(e.target.value)} />;
+    } else if (campo.tipo === 'casillas') {
+        const marcados = Array.isArray(valor) ? valor.map(String) : [];
+        const alternar = (v) => onChange(marcados.includes(String(v)) ? marcados.filter((x) => x !== String(v)) : [...marcados, String(v)]);
+        control = (
+            <div id={id} role="group" aria-describedby={comunes['aria-describedby']} className="flex flex-wrap gap-2">
+                {opciones.map((o) => {
+                    const [v, l] = typeof o === 'object' ? [o.id ?? o.value, o.label] : [o, o];
+                    const activo = marcados.includes(String(v));
+                    return (
+                        <label key={v} className={`flex cursor-pointer items-center gap-2 rounded-tema border px-3 py-1.5 text-sm transition ${activo ? 'border-primario bg-primario-tenue text-primario' : 'border-borde hover:bg-superficie-2'}`}>
+                            <input type="checkbox" className="size-4 accent-[var(--c-primario)]" checked={activo} onChange={() => alternar(v)} />
+                            {campo.etiquetaCorta ? campo.etiquetaCorta(l) : l}
+                        </label>
+                    );
+                })}
+            </div>
+        );
     } else if (campo.tipo === 'checkbox') {
         control = (
             <label className="flex items-center gap-2">

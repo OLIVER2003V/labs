@@ -31,7 +31,10 @@ class Disponibilidad
             ->where(fn ($q) => $q->whereNull('laboratorio_id')->orWhere('laboratorio_id', $laboratorioId))
             ->get();
         foreach ($bloqueos as $b) {
-            $conflictos[] = ['tipo' => 'BLOQUEO', 'detalle' => "Fecha bloqueada ({$b->tipo}): {$b->motivo}"];
+            if ($b->seCruzaCon($horaInicio, $horaFin)) {
+                $conflictos[] = ['tipo' => 'BLOQUEO', 'detalle' => "Fecha bloqueada ({$b->tipo}, {$b->horario()}): {$b->motivo}"]
+                    + ($b->esDiaCompleto() ? [] : ['hora_inicio' => substr($b->hora_inicio, 0, 5), 'hora_fin' => substr($b->hora_fin, 0, 5)]);
+            }
         }
 
         foreach (self::clasesDelDia($fecha, $laboratorioId) as $h) {
@@ -91,11 +94,19 @@ class Disponibilidad
     /** Agenda del día: por laboratorio, todas las clases y reservas (para la vista de calendario) */
     public static function agenda(string $fecha): array
     {
-        $bloqueoGeneral = FechaBloqueada::whereDate('fecha', $fecha)->whereNull('laboratorio_id')->first();
+        $bloqueosDia = FechaBloqueada::whereDate('fecha', $fecha)->get();
 
-        return Laboratorio::orderBy('codigo')->get()->map(function (Laboratorio $lab) use ($fecha, $bloqueoGeneral) {
-            $bloqueo = $bloqueoGeneral ?? FechaBloqueada::whereDate('fecha', $fecha)->where('laboratorio_id', $lab->id)->first();
+        return Laboratorio::orderBy('codigo')->get()->map(function (Laboratorio $lab) use ($fecha, $bloqueosDia) {
+            $suyos = $bloqueosDia->filter(fn ($b) => $b->laboratorio_id === null || $b->laboratorio_id === $lab->id);
+            // Día completo → toda la fila bloqueada; con horario → un bloque más en la agenda (ej: PSA 08:00–12:00)
+            $bloqueo = $suyos->first(fn ($b) => $b->esDiaCompleto());
             $bloques = [];
+            foreach ($suyos->reject(fn ($b) => $b->esDiaCompleto()) as $b) {
+                $bloques[] = [
+                    'tipo' => 'BLOQUEO', 'inicio' => substr($b->hora_inicio, 0, 5), 'fin' => substr($b->hora_fin, 0, 5),
+                    'titulo' => $b->tipo, 'detalle' => $b->motivo,
+                ];
+            }
 
             foreach (self::clasesDelDia($fecha, $lab->id) as $h) {
                 $bloques[] = [

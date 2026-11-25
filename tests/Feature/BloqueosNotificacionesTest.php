@@ -50,7 +50,7 @@ class BloqueosNotificacionesTest extends SistemaTestCase
         $lunes = $this->lunes();
         $this->bloquear(['fecha_desde' => $lunes->toDateString()])->assertCreated();
 
-        $this->bloquear(['fecha_desde' => $lunes->toDateString()])->assertStatus(422)->assertJson(['message' => 'Esa fecha ya está bloqueada.']);
+        $this->bloquear(['fecha_desde' => $lunes->toDateString()])->assertStatus(422)->assertJson(['message' => 'Ya existe un bloqueo para esa fecha y horario.']);
         // Un rango que incluye el día ya bloqueado: solo crea los nuevos y avisa los omitidos
         $r = $this->bloquear(['fecha_desde' => $lunes->toDateString(), 'fecha_hasta' => $lunes->copy()->addDays(2)->toDateString()])->assertCreated();
         $this->assertSame(2, $r->json('creados'));

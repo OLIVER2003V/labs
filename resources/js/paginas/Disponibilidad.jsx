@@ -16,6 +16,7 @@ const INICIO = 7;
 const FIN = 22;
 const minutos = (h) => Number(h.slice(0, 2)) * 60 + Number(h.slice(3, 5));
 const COLOR = {
+    BLOQUEO: 'z-10 bg-peligro-tenue border-peligro text-peligro shadow-sm', // al frente: ese día manda el bloqueo
     CLASE: 'bg-info-tenue border-info text-info',
     RESERVA: 'bg-exito-tenue border-exito text-exito',
     PENDIENTE: 'bg-alerta-tenue border-alerta text-alerta border-dashed',
@@ -29,7 +30,15 @@ function Agenda() {
 
     useEffect(() => {
         setDatos(null);
-        api.get('/disponibilidad/agenda', { params: { fecha: dia } }).then((r) => setDatos(r.data)).catch((e) => notificar(mensajeError(e), 'error'));
+        // Si se cambia de fecha antes de que llegue la respuesta, se ignora la respuesta vieja
+        // (si no, una respuesta lenta de otro día podría mostrarse con el título del día nuevo)
+        let vigente = true;
+        api.get('/disponibilidad/agenda', { params: { fecha: dia } })
+            .then((r) => vigente && setDatos(r.data))
+            .catch((e) => vigente && notificar(mensajeError(e), 'error'));
+        return () => {
+            vigente = false;
+        };
     }, [dia, notificar]);
 
     const mover = (n) => {
@@ -55,6 +64,7 @@ function Agenda() {
                 <span className="flex items-center gap-1"><span className="size-3 rounded border border-info bg-info-tenue" /> Clase (horario base)</span>
                 <span className="flex items-center gap-1"><span className="size-3 rounded border border-exito bg-exito-tenue" /> Reserva aprobada</span>
                 <span className="flex items-center gap-1"><span className="size-3 rounded border border-dashed border-alerta bg-alerta-tenue" /> Reserva pendiente</span>
+                <span className="flex items-center gap-1"><span className="size-3 rounded border border-peligro bg-peligro-tenue" /> Bloqueo (PSA, CUP, feriado…)</span>
             </div>
             {!datos ? <Cargando /> : (
                 <div className="overflow-x-auto">

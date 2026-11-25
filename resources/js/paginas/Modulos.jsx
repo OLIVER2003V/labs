@@ -117,16 +117,20 @@ export const Semestres = () => (
 );
 
 // ----------------------------------------------------------------- Fechas bloqueadas
+const TIPOS_BLOQUEO = ['FERIADO', 'PSA', 'CUP', 'MANTENIMIENTO', 'OTRO'];
 export const FechasBloqueadas = () => (
     <CrudPage
         titulo="Fechas bloqueadas"
-        descripcion="Feriados, PSA y mantenimientos: en estas fechas no se aceptan reservas. Puede bloquear un rango de días; si hay reservas afectadas se cancelan y se avisa a cada solicitante."
+        descripcion="Feriados, PSA, CUP y mantenimientos. Puede bloquear un rango de días, varios laboratorios y solo ciertas horas (fuera de ese horario el laboratorio sigue disponible). Se permite hasta 90 días antes del inicio del semestre. Si hay reservas afectadas se cancelan y se avisa a cada solicitante."
         endpoint="fechas-bloqueadas"
         singular="fecha bloqueada" femenino
         permisos={permisosDe('semestres')}
-        filtros={[{ name: 'tipo', label: 'Tipo', opciones: ['FERIADO', 'PSA', 'MANTENIMIENTO', 'OTRO'] }]}
+        inicial={{ laboratorios: [] }}
+        aFormulario={(f) => ({ ...f, hora_inicio: f.hora_inicio ? hora(f.hora_inicio) : '', hora_fin: f.hora_fin ? hora(f.hora_fin) : '', laboratorio_id: f.laboratorio_id ?? '' })}
+        filtros={[{ name: 'tipo', label: 'Tipo', opciones: TIPOS_BLOQUEO }]}
         columnas={[
             { key: 'fecha', label: 'Fecha', render: (f) => <strong>{fecha(f.fecha)}</strong> },
+            { key: 'horario', label: 'Horario', render: (f) => (f.hora_inicio ? `${hora(f.hora_inicio)} – ${hora(f.hora_fin)}` : 'Todo el día') },
             { key: 'tipo', label: 'Tipo', render: (f) => <Badge valor="PENDIENTE">{f.tipo}</Badge> },
             { key: 'motivo', label: 'Motivo' },
             { key: 'laboratorio', label: 'Afecta a', render: (f) => f.laboratorio?.codigo ?? 'Todos los laboratorios' },
@@ -140,8 +144,20 @@ export const FechasBloqueadas = () => (
                 validar: (x, v) => (v.fecha_desde && x < v.fecha_desde ? 'La fecha hasta no puede ser anterior a la fecha desde.' : null),
             },
             { name: 'fecha', label: 'Fecha', tipo: 'date', requerido: true, soloEditar: true },
-            { name: 'tipo', label: 'Tipo', tipo: 'select', requerido: true, opciones: ['FERIADO', 'PSA', 'MANTENIMIENTO', 'OTRO'] },
-            { name: 'laboratorio_id', label: 'Laboratorio', tipo: 'select', opciones: 'laboratorios', ayuda: 'Déjelo vacío si afecta a todos.' },
+            {
+                name: 'hora_inicio', label: 'Desde la hora', tipo: 'time', ayuda: 'Opcional: vacío = todo el día.',
+                requerido: (v) => !!v.hora_fin,
+            },
+            {
+                name: 'hora_fin', label: 'Hasta la hora', tipo: 'time', requerido: (v) => !!v.hora_inicio,
+                validar: (x, v) => (v.hora_inicio && x <= v.hora_inicio ? 'La hora final debe ser posterior a la inicial.' : null),
+            },
+            { name: 'tipo', label: 'Tipo', tipo: 'select', requerido: true, opciones: TIPOS_BLOQUEO, ayuda: 'PSA: Prueba de Suficiencia Académica · CUP: Curso Preuniversitario' },
+            {
+                name: 'laboratorios', label: 'Laboratorios', tipo: 'casillas', opciones: 'laboratorios', soloCrear: true, ancho: 'completo',
+                etiquetaCorta: (l) => l.split(' - ')[0], ayuda: 'Marque los laboratorios afectados. Si no marca ninguno, el bloqueo es para TODOS.',
+            },
+            { name: 'laboratorio_id', label: 'Laboratorio', tipo: 'select', opciones: 'laboratorios', soloEditar: true, ayuda: 'Vacío = todos los laboratorios.' },
             { name: 'motivo', label: 'Motivo', tipo: 'textarea', requerido: true, min: 3, max: 200, ancho: 'completo' },
         ]}
     />

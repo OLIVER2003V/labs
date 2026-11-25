@@ -54,10 +54,9 @@ class ReservaController extends CrudController
         abort_if($lab->estado !== 'DISPONIBLE', 422, "El laboratorio {$lab->codigo} está en estado {$lab->estado} y no acepta reservas.");
         abort_if(date('N', strtotime($datos['fecha'])) == 7, 422, 'Los laboratorios no atienden los domingos.');
 
-        $semestre = Semestre::activo();
-        abort_unless($semestre, 422, 'No hay un semestre activo.');
-        abort_if($datos['fecha'] < $semestre->fecha_inicio->format('Y-m-d') || $datos['fecha'] > $semestre->fecha_fin->format('Y-m-d'),
-            422, "La fecha está fuera del semestre activo ({$semestre->gestion}).");
+        // Se puede reservar en cualquier fecha futura, haya o no semestre activo (entre semestres hay PSA, CUP,
+        // cursos de verano…). Las clases del horario base solo ocupan los laboratorios dentro de su semestre.
+        abort_if($datos['fecha'] > now()->addYear()->format('Y-m-d'), 422, 'Solo se puede reservar con hasta un año de anticipación.');
 
         $conflictos = Disponibilidad::conflictos($lab->id, $datos['fecha'], $datos['hora_inicio'], $datos['hora_fin']);
         if ($conflictos) {
