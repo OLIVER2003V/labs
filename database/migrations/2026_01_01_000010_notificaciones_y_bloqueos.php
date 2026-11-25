@@ -27,6 +27,11 @@ return new class extends Migration
         });
 
         DB::statement('CREATE UNIQUE INDEX ux_fecha_bloqueada ON fechas_bloqueadas (fecha, COALESCE(laboratorio_id, 0))');
+
+        // En una base que ya tiene los datos reales del proyecto 1 (ej: el servidor), se traen sus notificaciones como historial
+        if (\Database\Seeders\ImportarSislabSeeder::disponible() && DB::table('usuarios')->exists()) {
+            \Database\Seeders\ImportarSislabSeeder::importarNotificaciones();
+        }
     }
 
     public function down(): void

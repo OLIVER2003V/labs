@@ -9,7 +9,8 @@
 #   bash scripts/servidor.sh datos [archivo]    restaura los datos desde un respaldo (por defecto el último)
 #   bash scripts/servidor.sh tablas [archivo]   si borraron TABLAS: recrea el esquema y carga el respaldo
 #   bash scripts/servidor.sh archivos           repone por FTP solo los archivos borrados o modificados (rápido)
-#   bash scripts/servidor.sh subir              sube la versión nueva completa (dist/proyecto2_app.tar.gz)
+#   bash scripts/servidor.sh subir              sube la versión nueva (dist/proyecto2_app.tar.gz) conservando el .env del servidor
+#   bash scripts/servidor.sh subir-completo     igual, pero también reemplaza el .env del servidor por .env.servidor (claves nuevas)
 #   bash scripts/servidor.sh todo [archivo]     archivos + reparar + datos  ("botón rojo")
 #   bash scripts/servidor.sh lista              respaldos disponibles del servidor
 # ======================================================================
@@ -38,6 +39,7 @@ case "${1:-verificar}" in
     tablas)    art respaldo:restaurar "$ARCHIVO" --reconstruir --forzar; art sistema:reparar ;;
     archivos)  "$PY" scripts/subir_ftp.py --reparar; probar ;;
     subir)     "$PY" scripts/subir_ftp.py --solo-codigo; probar ;;
+    subir-completo) "$PY" scripts/subir_ftp.py; probar ;;
     todo)      "$PY" scripts/subir_ftp.py --reparar
                art respaldo:restaurar "$ARCHIVO" --forzar || art respaldo:restaurar "$ARCHIVO" --reconstruir --forzar
                art sistema:reparar --admin; probar ;;

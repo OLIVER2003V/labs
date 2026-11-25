@@ -94,12 +94,7 @@ class ImportarSislabSeeder extends Seeder
 
         self::importarPermisos();
 
-        // Notificaciones que el proyecto 1 envió por correo: quedan como historial (ya leídas)
-        $this->lote('notificaciones', $s('notificacion')->orderBy('id')->get()->map(fn ($n) => [
-            'id' => $n->id, 'usuario_id' => $n->usuario_id, 'titulo' => mb_substr((string) $n->asunto, 0, 150),
-            'mensaje' => mb_substr(trim((string) $n->cuerpo) ?: (string) $n->asunto, 0, 600), 'url' => $n->reserva_id ? '/reservas' : null,
-            'reserva_id' => $n->reserva_id, 'leida_en' => $n->enviado_en, 'created_at' => $n->enviado_en,
-        ]));
+        self::importarNotificaciones();
 
         self::importarPermutasYMensajes();
 
@@ -125,6 +120,31 @@ class ImportarSislabSeeder extends Seeder
         ]);
 
         $this->command?->info('Importados desde '.$o.': '.collect(self::DESTINO)->map(fn ($t) => "$t=".DB::table($t)->count())->implode(', '));
+    }
+
+    /**
+     * Notificaciones que el proyecto 1 envió por correo: quedan como historial (ya leídas).
+     * También la llama la migración 000010 en una base ya importada. No hace nada si la tabla ya tiene datos.
+     */
+    public static function importarNotificaciones(): void
+    {
+        if (DB::table('notificaciones')->exists()) {
+            return;
+        }
+        $o = config('database.origen_sislab', 'sislab');
+        $usuarios = DB::table('usuarios')->pluck('id')->flip();
+        $reservas = DB::table('reservas')->pluck('id')->flip();
+        $filas = DB::table("$o.notificacion")->orderBy('id')->get()
+            ->filter(fn ($n) => isset($usuarios[$n->usuario_id]))
+            ->map(fn ($n) => [
+                'id' => $n->id, 'usuario_id' => $n->usuario_id, 'titulo' => mb_substr((string) $n->asunto, 0, 150),
+                'mensaje' => mb_substr(trim((string) $n->cuerpo) ?: (string) $n->asunto, 0, 600), 'url' => $n->reserva_id ? '/reservas' : null,
+                'reserva_id' => $n->reserva_id && isset($reservas[$n->reserva_id]) ? $n->reserva_id : null, 'leida_en' => $n->enviado_en, 'created_at' => $n->enviado_en,
+            ])->values();
+        foreach ($filas->chunk(300) as $lote) {
+            DB::table('notificaciones')->insert($lote->values()->all());
+        }
+        DB::statement("SELECT setval(pg_get_serial_sequence('notificaciones', 'id'), COALESCE((SELECT MAX(id) FROM notificaciones), 1), (SELECT COUNT(*) > 0 FROM notificaciones))");
     }
 
     /** CU7: permisos (licencias) de los auxiliares (también la llama la migración 000014 en una base ya importada) */
