@@ -63,7 +63,8 @@ export default function Login() {
                     <div className="w-full max-w-md">
                         <Isotipo className="mb-6 h-20 w-auto lg:hidden" />
                         <p className="font-[Montserrat] text-xs font-semibold tracking-[0.25em] text-acento uppercase">Laboratorios 4to Piso</p>
-                        <h2 className="mt-1 font-titulo text-4xl font-bold uppercase">Iniciar sesión</h2>
+                        <h2 className="mt-1 font-titulo text-4xl font-bold low
+                        ">Iniciar sesión</h2>
                         <p className="mt-1 text-suave">Ingrese con su correo institucional.</p>
 
                         {error && (

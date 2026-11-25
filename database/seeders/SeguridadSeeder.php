@@ -58,7 +58,7 @@ class SeguridadSeeder extends Seeder
     /** grupo, título, ruta React, ícono (lucide), permiso requerido */
     const MENU = [
         ['General', 'Inicio', '/', 'Home', null],
-        ['General', 'Panel de estadísticas', '/dashboard', 'BarChart3', 'dashboard.ver'],
+        ['General', 'Panel de estadísticas (Juan)', '/dashboard', 'BarChart3', 'dashboard.ver'],
         ['Horarios y reservas', 'Disponibilidad', '/disponibilidad', 'CalendarSearch', 'disponibilidad.ver'],
         ['Horarios y reservas', 'Reservas', '/reservas', 'CalendarCheck', 'reservas.ver'],
         ['Horarios y reservas', 'Horario base', '/horarios', 'CalendarDays', 'horarios.ver'],
