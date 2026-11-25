@@ -19,6 +19,11 @@ class Equipo extends Model
     {
         return $this->belongsTo(Laboratorio::class, 'laboratorio_id');
     }
+    /** CU6: configuración de red (1 a 1) */
+    public function red(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(EquipoRed::class, 'equipo_id');
+    }
     public function incidencias(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(Incidencia::class, 'equipo_id');

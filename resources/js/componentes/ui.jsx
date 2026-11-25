@@ -121,6 +121,10 @@ export function useOpciones(tipo) {
 export function Campo({ campo, valor, onChange, error, valores = {} }) {
     const id = useId();
     const remotas = useOpciones(typeof campo.opciones === 'string' ? campo.opciones : null);
+    // tipo 'seccion': solo un subtítulo que agrupa los campos siguientes (no es un dato). Va después de los hooks.
+    if (campo.tipo === 'seccion') {
+        return <h3 className="mt-2 border-t border-borde pt-4 text-sm font-semibold tracking-wide text-suave uppercase sm:col-span-2">{campo.label}</h3>;
+    }
     const opciones = typeof campo.opciones === 'string' ? remotas : campo.opciones ?? [];
     const requerido = typeof campo.requerido === 'function' ? campo.requerido(valores) : campo.requerido;
     const clase = `campo ${error ? 'campo-error' : ''}`;

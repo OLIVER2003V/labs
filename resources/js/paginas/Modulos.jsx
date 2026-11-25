@@ -210,10 +210,42 @@ export const Horarios = () => {
 
 // ----------------------------------------------------------------- Inventario
 const TIPOS_EQUIPO = ['COMPUTADORA', 'PROYECTOR', 'COMPONENTE', 'SOFTWARE', 'OTRO'];
+// CU6 - Configuración de red: solo para equipos que se conectan (no software ni componentes)
+const sinRed = (v) => ['SOFTWARE', 'COMPONENTE'].includes(v.tipo);
+const IPV4 = /^((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)$/;
+const ipANumero = (ip) => ip.split('.').reduce((n, o) => n * 256 + Number(o), 0);
+const campoIp = (name, label, extra = {}) => ({ name, label, patron: IPV4, mensajePatron: 'Escriba una IP válida (ej: 172.20.172.5).', oculto: sinRed, placeholder: extra.placeholder, ...extra });
+const CAMPOS_RED = [
+    { name: 'titulo_red', label: 'Configuración de red (opcional)', tipo: 'seccion', oculto: sinRed, ancho: 'completo' },
+    campoIp('red_ip', 'IP', { placeholder: '172.20.172.5', ayuda: 'Única en toda la facultad. Déjela vacía si el equipo no tiene red.' }),
+    campoIp('red_mascara', 'Máscara', {
+        placeholder: '255.255.255.0', requerido: (v) => !!v.red_ip,
+        validar: (m) => { const inv = (~ipANumero(m)) >>> 0; return (inv & (inv + 1)) === 0 && m !== '0.0.0.0' ? null : 'Máscara no válida (ej: 255.255.255.0).'; },
+    }),
+    campoIp('red_gateway', 'Gateway', {
+        placeholder: '172.20.172.254', requerido: (v) => !!v.red_ip,
+        validar: (g, v) => {
+            if (!v.red_ip || !IPV4.test(v.red_ip) || !IPV4.test(v.red_mascara ?? '')) return null;
+            if (g === v.red_ip) return 'El gateway no puede ser la misma IP del equipo.';
+            const m = ipANumero(v.red_mascara);
+            return ((ipANumero(g) & m) >>> 0) === ((ipANumero(v.red_ip) & m) >>> 0) ? null : 'El gateway debe estar en la misma subred que la IP.';
+        },
+    }),
+    campoIp('red_dns1', 'DNS primario', { placeholder: '10.10.0.251', requerido: (v) => !!v.red_ip }),
+    campoIp('red_dns2', 'DNS secundario', { placeholder: '8.8.8.8' }),
+    { name: 'red_proxy', label: 'Proxy', placeholder: '172.20.172.254:3128', oculto: sinRed, patron: /^[A-Za-z0-9.-]{3,50}:\d{2,5}$/, mensajePatron: 'Formato servidor:puerto (ej: 172.20.172.254:3128).' },
+    { name: 'red_grupo', label: 'Grupo de red', placeholder: 'LAB41', oculto: sinRed, mayusculas: true, patron: /^[A-Za-z0-9-]{2,20}$/, mensajePatron: 'De 2 a 20 letras, números o guiones (ej: LAB41).' },
+];
+/** La red viene anidada (f.red.ip) y el formulario la usa plana (red_ip) */
+const equipoAFormulario = (f) => ({
+    codigo: f.codigo, activo_fijo: f.activo_fijo ?? '', laboratorio_id: f.laboratorio_id, tipo: f.tipo, estado: f.estado, descripcion: f.descripcion,
+    red_ip: f.red?.ip ?? '', red_mascara: f.red?.mascara ?? '', red_gateway: f.red?.gateway ?? '', red_dns1: f.red?.dns1 ?? '',
+    red_dns2: f.red?.dns2 ?? '', red_proxy: f.red?.proxy ?? '', red_grupo: f.red?.grupo_red ?? '',
+});
 export const Equipos = () => (
     <CrudPage
         titulo="Inventario"
-        descripcion="Equipos, componentes y software de cada laboratorio. Al reportar una incidencia el equipo pasa a «en reparación» automáticamente."
+        descripcion="Equipos, componentes y software de cada laboratorio, con su configuración de red. Al reportar una incidencia el equipo pasa a «en reparación» automáticamente. Puede buscar por IP."
         endpoint="equipos"
         singular="equipo"
         permisos={permisosDe('equipos')}
@@ -227,8 +259,13 @@ export const Equipos = () => (
             { key: 'laboratorio', label: 'Laboratorio', render: (f) => f.laboratorio?.codigo },
             { key: 'tipo', label: 'Tipo', render: (f) => f.tipo.charAt(0) + f.tipo.slice(1).toLowerCase() },
             { key: 'descripcion', label: 'Descripción' },
+            {
+                key: 'red', label: 'Red',
+                render: (f) => (f.red ? <><span className="font-mono text-sm">{f.red.ip}</span><span className="block text-xs text-suave">GW {f.red.gateway}{f.red.grupo_red ? ` · ${f.red.grupo_red}` : ''}</span></> : <span className="text-suave">—</span>),
+            },
             { key: 'estado', label: 'Estado', render: (f) => <Badge valor={f.estado} /> },
         ]}
+        aFormulario={equipoAFormulario}
         campos={[
             { name: 'codigo', label: 'Código', requerido: true, patron: /^[A-Za-z0-9][A-Za-z0-9 ,./-]{1,19}$/, mensajePatron: 'De 2 a 20 caracteres: letras, números, espacio, coma, punto o guion (ej: LAB-41, PC-01).', mayusculas: true },
             { name: 'activo_fijo', label: 'Activo fijo', patron: /^[A-Za-z0-9-]{3,30}$/, mensajePatron: 'De 3 a 30 letras, números o guiones (ej: U147124117399).', mayusculas: true },
@@ -236,6 +273,7 @@ export const Equipos = () => (
             { name: 'tipo', label: 'Tipo', tipo: 'select', opciones: TIPOS_EQUIPO, requerido: true },
             { name: 'estado', label: 'Estado', tipo: 'select', opciones: ['OPERATIVO', 'EN_REPARACION', 'BAJA'], requerido: true },
             { name: 'descripcion', label: 'Descripción', tipo: 'textarea', requerido: true, min: 3, max: 200, ancho: 'completo' },
+            ...CAMPOS_RED,
         ]}
     />
 );

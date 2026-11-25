@@ -16,7 +16,7 @@ class Triggers
     /** Tablas con auditoría automática (INSERT / UPDATE / DELETE) */
     const AUDITADAS = [
         'usuarios', 'roles', 'rol_permiso', 'laboratorios', 'semestres', 'materias', 'horarios',
-        'reservas', 'equipos', 'incidencias', 'objetos_encontrados', 'turnos', 'asistencias', 'permutas',
+        'reservas', 'equipos', 'equipos_red', 'incidencias', 'objetos_encontrados', 'turnos', 'asistencias', 'permutas',
         'conceptos_pago', 'planes_pago', 'cuotas', 'transacciones', 'metodos_pago',
     ];
 

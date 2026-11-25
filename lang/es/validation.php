@@ -28,6 +28,8 @@ return [
     'gte' => ['numeric' => 'El campo :attribute debe ser mayor o igual que :value.'],
     'in' => 'El valor seleccionado en :attribute no es válido.',
     'integer' => 'El campo :attribute debe ser un número entero.',
+    'ip' => 'El campo :attribute debe ser una dirección IP válida.',
+    'ipv4' => 'El campo :attribute debe ser una dirección IPv4 válida (ej: 172.20.172.5).',
     'lowercase' => 'El campo :attribute debe estar en minúsculas.',
     'max' => [
         'numeric' => 'El campo :attribute no debe ser mayor que :max.',

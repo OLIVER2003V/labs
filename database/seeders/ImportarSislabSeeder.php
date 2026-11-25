@@ -72,6 +72,8 @@ class ImportarSislabSeeder extends Seeder
             'tipo' => $e->tipo, 'descripcion' => $e->descripcion, 'estado' => $e->estado, 'created_at' => now(), 'updated_at' => now(),
         ]));
 
+        self::importarRed();
+
         $this->lote('incidencias', $s('incidencia')->orderBy('id')->get()->map(fn ($i) => [
             'id' => $i->id, 'equipo_id' => $i->equipo_id, 'reportado_por' => $i->reportado_por, 'descripcion' => $i->descripcion,
             'estado' => $i->estado, 'solucion' => $i->solucion, 'fecha_solucion' => $i->fecha_solucion,
@@ -121,6 +123,48 @@ class ImportarSislabSeeder extends Seeder
         ]);
 
         $this->command?->info('Importados desde '.$o.': '.collect(self::DESTINO)->map(fn ($t) => "$t=".DB::table($t)->count())->implode(', '));
+    }
+
+    /**
+     * CU6: configuración de red de los equipos (también la llama la migración 000013 en una base ya importada).
+     * La IP debe ser única: si el proyecto 1 tenía una IP repetida, se conserva el primer equipo y se informa.
+     */
+    public static function importarRed(): void
+    {
+        if (DB::table('equipos_red')->exists()) {
+            return;
+        }
+        $o = config('database.origen_sislab', 'sislab');
+        $equipos = DB::table('equipos')->pluck('id')->flip();
+        $ips = [];
+        $repetidas = [];
+        $filas = [];
+        foreach (DB::table("$o.equipo_red")->orderBy('id')->get() as $r) {
+            $ip = trim($r->ip);
+            if (! isset($equipos[$r->equipo_id])) {
+                continue;
+            }
+            if (isset($ips[$ip])) {
+                $repetidas[] = "$ip (equipo {$r->equipo_id}, ya asignada al equipo {$ips[$ip]})";
+                continue;
+            }
+            $ips[$ip] = $r->equipo_id;
+            $vacio = fn ($v) => trim((string) $v) === '' ? null : trim($v);
+            $filas[] = [
+                'id' => $r->id, 'equipo_id' => $r->equipo_id, 'ip' => $ip, 'mascara' => trim($r->mascara), 'gateway' => trim($r->gateway),
+                'dns1' => trim($r->dns1), 'dns2' => $vacio($r->dns2), 'proxy' => $vacio($r->proxy), 'grupo_red' => $vacio($r->grupo_red),
+                'created_at' => now(), 'updated_at' => now(),
+            ];
+        }
+        DB::statement('ALTER TABLE equipos_red DISABLE TRIGGER USER'); // no auditar la importación
+        foreach (array_chunk($filas, 300) as $lote) {
+            DB::table('equipos_red')->insert($lote);
+        }
+        DB::statement('ALTER TABLE equipos_red ENABLE TRIGGER USER');
+        DB::statement("SELECT setval(pg_get_serial_sequence('equipos_red', 'id'), COALESCE((SELECT MAX(id) FROM equipos_red), 1), (SELECT COUNT(*) > 0 FROM equipos_red))");
+        if ($repetidas) {
+            logger()->warning('Configuración de red: IP repetidas en el proyecto 1 que no se importaron: '.implode('; ', $repetidas));
+        }
     }
 
     /**

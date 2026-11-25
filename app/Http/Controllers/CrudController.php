@@ -41,6 +41,12 @@ abstract class CrudController extends Controller
     /** Mensaje de respuesta personalizado: un gancho puede cambiarlo (ej: "Reserva aprobada…") */
     protected ?string $mensaje = null;
 
+    /** Nombres legibles de los campos para los mensajes de error (ej: ['red_ip' => 'IP']) */
+    protected function atributos(): array
+    {
+        return [];
+    }
+
     /** Reglas de validación. $registro es null al crear. */
     abstract protected function reglas(Request $request, ?Model $registro): array;
 
@@ -104,7 +110,7 @@ abstract class CrudController extends Controller
 
     public function store(Request $request): JsonResponse
     {
-        $datos = $request->validate($this->reglas($request, null));
+        $datos = $request->validate($this->reglas($request, null), [], $this->atributos());
         // Todo en una transacción: si algo falla (ej: un trigger), se deshace también lo que hicieron los ganchos
         $registro = DB::transaction(function () use ($datos, $request) {
             $datos = $this->antesDeGuardar($datos, $request, null);
@@ -123,7 +129,7 @@ abstract class CrudController extends Controller
     public function update(Request $request, int $id): JsonResponse
     {
         $registro = $this->consulta(($this->modelo)::query(), $request)->findOrFail($id);
-        $datos = $request->validate($this->reglas($request, $registro));
+        $datos = $request->validate($this->reglas($request, $registro), [], $this->atributos());
         DB::transaction(function () use ($datos, $request, $registro) {
             $datos = $this->antesDeGuardar($datos, $request, $registro);
             $registro->update($datos);
