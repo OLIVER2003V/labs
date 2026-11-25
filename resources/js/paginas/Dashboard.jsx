@@ -60,7 +60,7 @@ export default function Dashboard() {
 
     return (
         <>
-            <Encabezado titulo="Panel de estadísticas" descripcion={`Actividad del ${fecha(d.rango.desde)} al ${fecha(d.rango.hasta)}`}>
+            <Encabezado titulo="Panel de estadísticas(Juan)" descripcion={`Actividad del ${fecha(d.rango.desde)} al ${fecha(d.rango.hasta)}`}>
                 <label className="flex items-center gap-2 text-sm">Desde
                     <input type="date" className="campo w-auto py-1.5" value={rango.desde || d.rango.desde} max={rango.hasta || d.rango.hasta} onChange={(e) => setRango({ hasta: rango.hasta || d.rango.hasta, desde: e.target.value })} />
                 </label>
