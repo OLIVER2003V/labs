@@ -11,6 +11,7 @@ import PanelAccesibilidad from './PanelAccesibilidad';
 import Footer from './Footer';
 import ErrorBoundary from './ErrorBoundary';
 import { LogoHorizontal } from './Logo';
+import Notificaciones from './Notificaciones';
 
 // Íconos disponibles para el menú (el nombre se guarda en la columna menus.icono)
 const ICONOS = {
@@ -188,6 +189,7 @@ export default function Layout() {
                 </button>
                 <BuscadorGlobal />
                 <div className="ml-auto flex items-center gap-1">
+                    <Notificaciones />
                     <PanelAccesibilidad />
                     <div className="relative">
                         <button className="btn btn-fantasma btn-sm" onClick={() => setMenuUsuario((v) => !v)} aria-expanded={menuUsuario} aria-haspopup="menu">

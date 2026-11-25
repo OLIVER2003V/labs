@@ -6,6 +6,7 @@ use App\Models\Laboratorio;
 use App\Models\Reserva;
 use App\Models\Semestre;
 use App\Services\Disponibilidad;
+use App\Services\Notificador;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
@@ -74,6 +75,26 @@ class ReservaController extends CrudController
         return $datos;
     }
 
+    /** Al crear una solicitud se avisa a quienes pueden aprobarla (Encargados) */
+    protected function despuesDeGuardar(Model $registro, Request $request, bool $nuevo): void
+    {
+        if ($nuevo) {
+            $r = $registro->load(['laboratorio', 'solicitante']);
+            Notificador::aQuienesPuedan('reservas.aprobar', "Nueva solicitud de reserva #{$r->id}",
+                "{$r->solicitante->nombre_completo} solicita {$r->laboratorio->codigo} el ".$r->fecha->format('d/m/Y')
+                .' de '.substr($r->hora_inicio, 0, 5).' a '.substr($r->hora_fin, 0, 5)." para {$r->tipo}: {$r->motivo}.",
+                '/reservas', $r->id, $request->user()->id);
+        }
+    }
+
+    private function avisarSolicitante(Reserva $r, string $titulo, string $mensaje): void
+    {
+        $r->loadMissing('laboratorio');
+        Notificador::enviar($r->solicitante_id, $titulo,
+            "{$r->laboratorio->codigo} el ".$r->fecha->format('d/m/Y').' de '.substr($r->hora_inicio, 0, 5).' a '.substr($r->hora_fin, 0, 5)." ({$r->motivo}). $mensaje",
+            '/reservas', $r->id);
+    }
+
     public function aprobar(Request $request, int $id): JsonResponse
     {
         $reserva = Reserva::findOrFail($id);
@@ -92,6 +113,7 @@ class ReservaController extends CrudController
 
         // El trigger tg_reserva_sin_choque vuelve a verificar en la base de datos
         $reserva->update(['estado' => 'APROBADA', 'resuelto_por' => $request->user()->id, 'observacion' => $request->input('observacion')]);
+        $this->avisarSolicitante($reserva, "Su reserva #{$reserva->id} fue APROBADA", 'El laboratorio queda reservado para usted.');
 
         return response()->json(['message' => 'Reserva aprobada.', 'data' => $reserva->fresh($this->con)]);
     }
@@ -103,6 +125,7 @@ class ReservaController extends CrudController
         $reserva = Reserva::findOrFail($id);
         abort_if($reserva->estado !== 'PENDIENTE', 422, "La reserva ya fue resuelta (estado {$reserva->estado}).");
         $reserva->update(['estado' => 'RECHAZADA', 'resuelto_por' => $request->user()->id, 'observacion' => $datos['observacion']]);
+        $this->avisarSolicitante($reserva, "Su reserva #{$reserva->id} fue rechazada", "Motivo: {$datos['observacion']}");
 
         return response()->json(['message' => 'Reserva rechazada.', 'data' => $reserva->fresh($this->con)]);
     }
@@ -116,6 +139,9 @@ class ReservaController extends CrudController
         abort_unless(in_array($reserva->estado, ['PENDIENTE', 'APROBADA']), 422, 'Solo se pueden cancelar reservas pendientes o aprobadas.');
         abort_if($reserva->fecha->format('Y-m-d') < now()->format('Y-m-d'), 422, 'No se puede cancelar una reserva de una fecha pasada.');
         $reserva->update(['estado' => 'CANCELADA']);
+        if ($reserva->solicitante_id !== $usuario->id) { // la canceló el Encargado: se avisa al solicitante
+            $this->avisarSolicitante($reserva, "Su reserva #{$reserva->id} fue cancelada", "La canceló {$usuario->nombre_completo}.");
+        }
 
         return response()->json(['message' => 'Reserva cancelada.', 'data' => $reserva->fresh($this->con)]);
     }

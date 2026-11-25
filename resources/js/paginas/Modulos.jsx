@@ -120,7 +120,7 @@ export const Semestres = () => (
 export const FechasBloqueadas = () => (
     <CrudPage
         titulo="Fechas bloqueadas"
-        descripcion="Feriados, PSA y mantenimientos: en estas fechas no se aceptan reservas."
+        descripcion="Feriados, PSA y mantenimientos: en estas fechas no se aceptan reservas. Puede bloquear un rango de días; si hay reservas afectadas se cancelan y se avisa a cada solicitante."
         endpoint="fechas-bloqueadas"
         singular="fecha bloqueada" femenino
         permisos={permisosDe('semestres')}
@@ -134,7 +134,12 @@ export const FechasBloqueadas = () => (
         ]}
         campos={[
             { name: 'semestre_id', label: 'Semestre', tipo: 'select', opciones: 'semestres', requerido: true },
-            { name: 'fecha', label: 'Fecha', tipo: 'date', requerido: true },
+            { name: 'fecha_desde', label: 'Desde', tipo: 'date', requerido: true, soloCrear: true },
+            {
+                name: 'fecha_hasta', label: 'Hasta', tipo: 'date', soloCrear: true, ayuda: 'Opcional: déjelo vacío para bloquear un solo día. Los domingos se omiten.',
+                validar: (x, v) => (v.fecha_desde && x < v.fecha_desde ? 'La fecha hasta no puede ser anterior a la fecha desde.' : null),
+            },
+            { name: 'fecha', label: 'Fecha', tipo: 'date', requerido: true, soloEditar: true },
             { name: 'tipo', label: 'Tipo', tipo: 'select', requerido: true, opciones: ['FERIADO', 'PSA', 'MANTENIMIENTO', 'OTRO'] },
             { name: 'laboratorio_id', label: 'Laboratorio', tipo: 'select', opciones: 'laboratorios', ayuda: 'Déjelo vacío si afecta a todos.' },
             { name: 'motivo', label: 'Motivo', tipo: 'textarea', requerido: true, min: 3, max: 200, ancho: 'completo' },

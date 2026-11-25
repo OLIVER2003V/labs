@@ -40,6 +40,7 @@ export default function CrudPage({
     const [errores, setErrores] = useState({});
     const [enviando, setEnviando] = useState(false);
     const [borrar, setBorrar] = useState(null);
+    const [confirmacion, setConfirmacion] = useState(null); // { message, detalle[] } cuando el servidor pide confirmar
     const [exportando, setExportando] = useState(false);
 
     /** Exporta a CSV (Excel) TODOS los registros del filtro actual, no solo la página visible */
@@ -112,7 +113,7 @@ export default function CrudPage({
         setValores(fila ? (aFormulario ? aFormulario(fila) : Object.fromEntries(campos.map((c) => [c.name, fila[c.name] ?? '']))) : { ...inicial });
     };
 
-    const guardar = async () => {
+    const guardar = async (confirmar = false) => {
         const e = validar(valores, camposForm);
         setErrores(e);
         if (Object.keys(e).length) {
@@ -122,11 +123,17 @@ export default function CrudPage({
         setEnviando(true);
         try {
             const datosEnvio = Object.fromEntries(Object.entries(valores).map(([k, v]) => [k, v === '' ? null : v]));
+            if (confirmar) datosEnvio.confirmar = true;
             const { data } = form.id ? await api.put(`/${endpoint}/${form.id}`, datosEnvio) : await api.post(`/${endpoint}`, datosEnvio);
             notificar(data.message);
             setForm(null);
             cargar();
         } catch (err) {
+            // El servidor avisa que la acción tiene consecuencias (ej: cancelar reservas) y pide confirmar
+            if (err.response?.status === 409 && err.response.data?.requiere_confirmacion) {
+                setConfirmacion(err.response.data);
+                return;
+            }
             setErrores(erroresCampos(err));
             notificar(mensajeError(err), 'error');
         } finally {
@@ -243,7 +250,27 @@ export default function CrudPage({
             </div>
 
             <Modal abierto={!!form} titulo={form?.id ? `Editar ${singular}` : `${femenino ? 'Nueva' : 'Nuevo'} ${singular}`} onCerrar={() => setForm(null)} ancho="max-w-2xl">
-                <Formulario campos={camposForm} valores={valores} setValores={setValores} errores={errores} onEnviar={guardar} enviando={enviando} onCancelar={() => setForm(null)} />
+                <Formulario campos={camposForm} valores={valores} setValores={setValores} errores={errores} onEnviar={() => guardar()} enviando={enviando} onCancelar={() => setForm(null)} />
+            </Modal>
+
+            <Modal abierto={!!confirmacion} titulo="Confirmar cambios" onCerrar={() => setConfirmacion(null)} ancho="max-w-2xl">
+                <p className="rounded-tema border border-alerta bg-alerta-tenue p-3 text-sm font-medium">{confirmacion?.message}</p>
+                <ul className="mt-3 max-h-64 list-disc overflow-y-auto pl-5 text-sm text-suave">
+                    {confirmacion?.detalle?.map((d) => <li key={d} className="py-0.5">{d}</li>)}
+                </ul>
+                <div className="mt-5 flex justify-end gap-2">
+                    <button className="btn btn-secundario" onClick={() => setConfirmacion(null)}>Volver</button>
+                    <button
+                        className="btn btn-peligro"
+                        disabled={enviando}
+                        onClick={async () => {
+                            setConfirmacion(null);
+                            await guardar(true);
+                        }}
+                    >
+                        Continuar y notificar
+                    </button>
+                </div>
             </Modal>
 
             <Confirmar

@@ -55,6 +55,9 @@ abstract class CrudController extends Controller
     /** Reglas de negocio antes de eliminar (lanzar abort(4xx, 'mensaje') si no se puede) */
     protected function antesDeEliminar(Model $registro, Request $request): void {}
 
+    /** Acciones después de guardar (ej: enviar notificaciones). $nuevo = true al crear */
+    protected function despuesDeGuardar(Model $registro, Request $request, bool $nuevo): void {}
+
     public function index(Request $request): JsonResponse
     {
         $query = $this->consulta(
@@ -100,6 +103,7 @@ abstract class CrudController extends Controller
         $datos = $request->validate($this->reglas($request, null));
         $datos = $this->antesDeGuardar($datos, $request, null);
         $registro = ($this->modelo)::create($datos);
+        $this->despuesDeGuardar($registro, $request, true);
 
         return response()->json([
             'message' => 'Registro creado correctamente.',
@@ -113,6 +117,7 @@ abstract class CrudController extends Controller
         $datos = $request->validate($this->reglas($request, $registro));
         $datos = $this->antesDeGuardar($datos, $request, $registro);
         $registro->update($datos);
+        $this->despuesDeGuardar($registro, $request, false);
 
         return response()->json([
             'message' => 'Registro actualizado correctamente.',

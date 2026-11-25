@@ -17,7 +17,7 @@ class Respaldo
         'laboratorios', 'semestres', 'fechas_bloqueadas', 'materias', 'horarios', 'reservas',
         'equipos', 'incidencias', 'objetos_encontrados', 'turnos', 'asistencias',
         'conceptos_pago', 'metodos_pago', 'planes_pago', 'cuotas', 'transacciones',
-        'bitacora', 'visitas_pagina', 'auditoria',
+        'notificaciones', 'bitacora', 'visitas_pagina', 'auditoria',
     ];
 
     public static function carpeta(): string

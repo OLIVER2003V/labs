@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Laboratorio;
+use App\Models\Reserva;
+use App\Services\Notificador;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -31,6 +33,21 @@ class LaboratorioController extends CrudController
     protected function antesDeGuardar(array $datos, Request $request, ?Model $registro): array
     {
         $datos['codigo'] = strtoupper($datos['codigo']);
+
+        // Si el laboratorio deja de estar DISPONIBLE, sus reservas futuras ya no se pueden cumplir
+        if ($registro && $registro->estado === 'DISPONIBLE' && $datos['estado'] !== 'DISPONIBLE') {
+            $afectadas = Reserva::with(['laboratorio', 'solicitante'])->where('laboratorio_id', $registro->id)
+                ->whereIn('estado', ['PENDIENTE', 'APROBADA'])->whereDate('fecha', '>=', now()->toDateString())
+                ->orderBy('fecha')->orderBy('hora_inicio')->get();
+            if ($afectadas->isNotEmpty() && ! $request->boolean('confirmar')) {
+                abort(response()->json([
+                    'message' => "Pasar {$registro->codigo} a {$datos['estado']} afecta {$afectadas->count()} reserva(s) futura(s): se cancelarán y se notificará a sus solicitantes.",
+                    'requiere_confirmacion' => true,
+                    'detalle' => $afectadas->map(fn ($r) => Notificador::describir($r))->values(),
+                ], 409));
+            }
+            Notificador::cancelarReservasAfectadas($afectadas, "el laboratorio {$registro->codigo} pasó a estado {$datos['estado']}", $request->user()->id);
+        }
 
         return $datos;
     }

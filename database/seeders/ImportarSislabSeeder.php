@@ -19,7 +19,7 @@ class ImportarSislabSeeder extends Seeder
 {
     /** Tablas del proyecto 2 que se llenan aquí (para desactivar sus triggers durante la carga) */
     const DESTINO = ['usuarios', 'laboratorios', 'semestres', 'fechas_bloqueadas', 'materias', 'horarios', 'reservas',
-        'equipos', 'incidencias', 'objetos_encontrados', 'turnos', 'asistencias', 'bitacora'];
+        'equipos', 'incidencias', 'objetos_encontrados', 'turnos', 'asistencias', 'notificaciones', 'bitacora'];
 
     public static function disponible(): bool
     {
@@ -88,6 +88,13 @@ class ImportarSislabSeeder extends Seeder
         $this->lote('turnos', $s('turno')->orderBy('id')->get()->map(fn ($x) => (array) $x + ['created_at' => now(), 'updated_at' => now()]));
         $this->lote('asistencias', $s('asistencia')->orderBy('id')->get()->map(fn ($x) => (array) $x + [
             'observacion' => $x->estado === 'FALTA' ? 'Sin registro de entrada' : null, 'created_at' => $x->fecha, 'updated_at' => $x->fecha,
+        ]));
+
+        // Notificaciones que el proyecto 1 envió por correo: quedan como historial (ya leídas)
+        $this->lote('notificaciones', $s('notificacion')->orderBy('id')->get()->map(fn ($n) => [
+            'id' => $n->id, 'usuario_id' => $n->usuario_id, 'titulo' => mb_substr((string) $n->asunto, 0, 150),
+            'mensaje' => mb_substr(trim((string) $n->cuerpo) ?: (string) $n->asunto, 0, 600), 'url' => $n->reserva_id ? '/reservas' : null,
+            'reserva_id' => $n->reserva_id, 'leida_en' => $n->enviado_en, 'created_at' => $n->enviado_en,
         ]));
 
         // Bitácora del proyecto 1: cada comando recibido por correo se registra como un acceso

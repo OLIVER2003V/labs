@@ -12,6 +12,7 @@ use App\Http\Controllers\HorarioController;
 use App\Http\Controllers\IncidenciaController;
 use App\Http\Controllers\LaboratorioController;
 use App\Http\Controllers\MateriaController;
+use App\Http\Controllers\NotificacionController;
 use App\Http\Controllers\ObjetoEncontradoController;
 use App\Http\Controllers\PagoController;
 use App\Http\Controllers\PagoQrController;
@@ -61,6 +62,9 @@ Route::middleware(['auth:sanctum', 'bitacora'])->group(function () {
     Route::put('perfil/password', [AuthController::class, 'cambiarPassword']);
     Route::put('perfil/preferencias', [AuthController::class, 'guardarPreferencias']);
     Route::get('buscar', [GeneralController::class, 'buscar']);
+    Route::get('notificaciones', [NotificacionController::class, 'index']);
+    Route::put('notificaciones/leer-todas', [NotificacionController::class, 'leerTodas']);
+    Route::put('notificaciones/{id}/leer', [NotificacionController::class, 'leer'])->whereNumber('id');
     Route::get('opciones/{tipo}', [GeneralController::class, 'opciones']);
 
     Route::get('dashboard', [DashboardController::class, 'index'])->middleware('permiso:dashboard.ver');
