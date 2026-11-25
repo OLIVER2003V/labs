@@ -104,7 +104,8 @@ class GeneralController extends Controller
             'semestres' => Semestre::orderByDesc('fecha_inicio')->get()->map(fn ($s) => ['id' => $s->id, 'label' => "{$s->gestion} ({$s->estado})"]),
             'equipos' => Equipo::with('laboratorio')->where('estado', '<>', 'BAJA')->orderBy('codigo')->get()
                 ->map(fn ($e) => ['id' => $e->id, 'label' => "{$e->codigo} - {$e->descripcion} ({$e->laboratorio?->codigo})"]),
-            'conceptos' => ConceptoPago::where('activo', true)->orderBy('nombre')->get()->map(fn ($c) => ['id' => $c->id, 'label' => "{$c->nombre} - Bs {$c->monto}", 'monto' => $c->monto]),
+            // Las multas (MULTA-*) no se eligen a mano: las genera el sistema (CU9). Aquí solo los cobros voluntarios.
+            'conceptos' => ConceptoPago::where('activo', true)->where('codigo', 'not like', 'MULTA-%')->orderBy('nombre')->get()->map(fn ($c) => ['id' => $c->id, 'label' => "{$c->nombre} - Bs {$c->monto}", 'monto' => $c->monto]),
             'turnos' => Turno::with('auxiliar')->whereHas('semestre', fn ($s) => $s->where('estado', 'ACTIVO'))->orderBy('dia_semana')->get()
                 ->map(fn ($t) => ['id' => $t->id, 'label' => $t->auxiliar->nombre_completo.' · '.['', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'][$t->dia_semana].' '.substr($t->hora_inicio, 0, 5).'-'.substr($t->hora_fin, 0, 5)]),
             // CU5: los turnos del propio usuario en el semestre activo (para pedir una permuta)

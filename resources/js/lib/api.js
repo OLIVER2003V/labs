@@ -18,8 +18,20 @@ api.interceptors.request.use((config) => {
     return config;
 });
 
+// Si el servidor ya tiene una versión más nueva que la que está abierta en esta pestaña, se avisa (una sola vez)
+let versionAvisada = false;
+const revisarVersion = (r) => {
+    const delServidor = r?.headers?.['x-app-version'];
+    const local = window.APP?.version;
+    if (!versionAvisada && delServidor && local && delServidor !== 'dev' && local !== 'dev' && delServidor !== local) {
+        versionAvisada = true;
+        window.dispatchEvent(new Event('version-nueva'));
+    }
+    return r;
+};
+
 api.interceptors.response.use(
-    (r) => r,
+    revisarVersion,
     (error) => {
         if (error.response?.status === 401 && localStorage.getItem('token')) {
             localStorage.removeItem('token');

@@ -97,6 +97,16 @@ class SeguridadAuditoriaTest extends SistemaTestCase
         $this->postJson("/api/auditoria/{$auditoria->id}/deshacer")->assertStatus(422);
     }
 
+    public function test_la_api_informa_la_version_y_las_multas_no_se_eligen_como_concepto(): void
+    {
+        $this->getJson('/api/estado')->assertOk()->assertHeader('X-App-Version');
+
+        $this->como('docente@ficct.edu.bo');
+        $conceptos = array_column($this->getJson('/api/opciones/conceptos')->json(), 'label');
+        $this->assertNotEmpty($conceptos);
+        $this->assertEmpty(array_filter($conceptos, fn ($l) => str_starts_with($l, 'Multa')));
+    }
+
     public function test_restaurar_en_lote_lo_borrado_por_sql_respetando_padres_e_hijos(): void
     {
         // Un equipo con su red y sus incidencias, borrado "a mano" (primero los hijos, por las claves foráneas)

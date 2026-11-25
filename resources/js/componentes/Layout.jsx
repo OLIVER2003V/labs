@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
     ArrowLeftRight, BarChart3, BookOpen, Building2, CalendarCheck, CalendarDays, CalendarRange, CalendarSearch, CalendarX, Circle, Clock,
-    CreditCard, FileSpreadsheet, Gavel, History, Home, ListChecks, LogOut, Menu as MenuIcon, MessagesSquare, Monitor, PackageSearch, ScrollText, Search, ShieldCheck,
+    CreditCard, FileSpreadsheet, Gavel, History, Home, ListChecks, LogOut, Menu as MenuIcon, MessagesSquare, Monitor, PackageSearch, RefreshCw, ScrollText, Search, ShieldCheck,
     Tags, UserCheck, UserCircle2, Users, Wallet, Wrench, X,
 } from 'lucide-react';
 import api from '../lib/api';
@@ -17,7 +17,7 @@ import { useMedia } from './ui';
 // Íconos disponibles para el menú (el nombre se guarda en la columna menus.icono)
 const ICONOS = {
     ArrowLeftRight, BarChart3, BookOpen, Building2, CalendarCheck, CalendarDays, CalendarRange, CalendarSearch, CalendarX, Clock, CreditCard,
-    FileSpreadsheet, Gavel, History, Home, ListChecks, MessagesSquare, Monitor, PackageSearch, ScrollText, ShieldCheck, Tags, UserCheck, Users, Wallet, Wrench,
+    FileSpreadsheet, Gavel, History, Home, ListChecks, MessagesSquare, Monitor, PackageSearch, RefreshCw, ScrollText, ShieldCheck, Tags, UserCheck, Users, Wallet, Wrench,
 };
 
 /** Ícono por nombre (el nombre viene de la tabla menus) */
@@ -164,6 +164,24 @@ function BuscadorGlobal() {
     );
 }
 
+/** Aviso cuando se publicó una versión nueva del sistema mientras esta pestaña estaba abierta (ver lib/api.js) */
+function AvisoVersion() {
+    const [nueva, setNueva] = useState(false);
+    useEffect(() => {
+        const alAvisar = () => setNueva(true);
+        window.addEventListener('version-nueva', alAvisar);
+        return () => window.removeEventListener('version-nueva', alAvisar);
+    }, []);
+    if (!nueva) return null;
+    return (
+        <div className="fixed inset-x-3 bottom-3 z-[60] mx-auto flex max-w-xl flex-wrap items-center gap-3 rounded-tema border border-primario bg-superficie p-3 shadow-lg sm:inset-x-auto sm:right-4 sm:left-auto" role="alert">
+            <RefreshCw className="size-5 shrink-0 text-primario" aria-hidden />
+            <p className="min-w-0 flex-1 text-sm"><strong>Se actualizó el sistema.</strong> Recargue para usar la versión nueva.</p>
+            <button className="btn btn-primario btn-sm" onClick={() => window.location.reload()}>Recargar</button>
+        </div>
+    );
+}
+
 export default function Layout() {
     const { usuario, logout } = useAuth();
     const [menuMovil, setMenuMovil] = useState(false);
@@ -179,6 +197,7 @@ export default function Layout() {
 
     return (
         <div className="min-h-screen lg:pl-64">
+            <AvisoVersion />
             <a href="#contenido" className="solo-lector focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[70] focus:rounded focus:bg-primario focus:p-2 focus:text-sobre-primario">
                 Saltar al contenido
             </a>

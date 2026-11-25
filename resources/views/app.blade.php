@@ -18,6 +18,7 @@
             api: @json(url('/api')),
             nombre: @json(config('app.name')),
             demo: @json($demo ?? []),
+            version: @json(\App\Support\Version::actual()), // si la API responde otra versión, se ofrece recargar
         };
         // Aplica el tema guardado ANTES de pintar la página (evita parpadeo)
         try {
