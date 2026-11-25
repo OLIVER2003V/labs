@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 
@@ -107,5 +108,45 @@ class UsuarioController extends CrudController
         $usuario->restore();
 
         return response()->json(['message' => "Usuario {$usuario->nombre_completo} restaurado.", 'data' => $usuario->load('rol')]);
+    }
+
+    // ---------------- CU10: seguridad de la cuenta ----------------
+
+    /** GET /api/usuarios/{id}/seguridad → si está bloqueado por intentos fallidos y sus sesiones abiertas */
+    public function seguridad(int $id): JsonResponse
+    {
+        $u = User::findOrFail($id);
+        $clave = AuthController::claveBloqueo($u->email);
+        $bloqueado = RateLimiter::tooManyAttempts($clave, AuthController::MAX_FALLIDOS);
+
+        return response()->json([
+            'bloqueado' => $bloqueado,
+            'minutos_restantes' => $bloqueado ? (int) ceil(RateLimiter::availableIn($clave) / 60) : 0,
+            'intentos_fallidos' => RateLimiter::attempts($clave),
+            'ultimo_acceso' => $u->ultimo_acceso,
+            'sesiones' => $u->tokens()->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()))->orderByDesc('last_used_at')
+                ->get(['id', 'name', 'created_at', 'last_used_at'])->map(fn ($t) => ['dispositivo' => $t->name, 'iniciada' => $t->created_at, 'ultimo_uso' => $t->last_used_at]),
+        ]);
+    }
+
+    /** PUT /api/usuarios/{id}/desbloquear → borra el contador de intentos fallidos */
+    public function desbloquear(Request $request, int $id): JsonResponse
+    {
+        $u = User::findOrFail($id);
+        $this->protegerSistema($request, $u);
+        RateLimiter::clear(AuthController::claveBloqueo($u->email));
+
+        return response()->json(['message' => "La cuenta de {$u->nombre_completo} fue desbloqueada."]);
+    }
+
+    /** PUT /api/usuarios/{id}/cerrar-sesiones → expulsa al usuario de todos sus dispositivos (ej: cuenta comprometida) */
+    public function cerrarSesiones(Request $request, int $id): JsonResponse
+    {
+        $u = User::findOrFail($id);
+        $this->protegerSistema($request, $u);
+        abort_if($u->id === $request->user()->id, 422, 'Para cerrar sus propias sesiones use Mi perfil.');
+        $n = $u->tokens()->delete();
+
+        return response()->json(['message' => $n ? "Se cerraron $n sesión(es) de {$u->nombre_completo}." : "{$u->nombre_completo} no tenía sesiones abiertas."]);
     }
 }

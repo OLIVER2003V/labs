@@ -64,6 +64,9 @@ Route::middleware(['auth:sanctum', 'bitacora'])->group(function () {
     Route::post('logout', [AuthController::class, 'logout']);
     Route::put('perfil', [AuthController::class, 'actualizarPerfil']);
     Route::put('perfil/password', [AuthController::class, 'cambiarPassword']);
+    Route::get('perfil/sesiones', [AuthController::class, 'sesiones']);                       // CU10: sesiones activas
+    Route::delete('perfil/sesiones', [AuthController::class, 'cerrarOtrasSesiones']);
+    Route::delete('perfil/sesiones/{id}', [AuthController::class, 'cerrarSesion'])->whereNumber('id');
     Route::put('perfil/preferencias', [AuthController::class, 'guardarPreferencias']);
     Route::get('buscar', [GeneralController::class, 'buscar']);
     Route::get('notificaciones', [NotificacionController::class, 'index']);
@@ -83,6 +86,9 @@ Route::middleware(['auth:sanctum', 'bitacora'])->group(function () {
     Route::put('usuarios/{id}/aprobar', [UsuarioController::class, 'aprobar'])->whereNumber('id')->middleware('permiso:usuarios.editar');
     Route::put('usuarios/{id}/rechazar', [UsuarioController::class, 'rechazar'])->whereNumber('id')->middleware('permiso:usuarios.editar');
     Route::put('usuarios/{id}/restaurar', [UsuarioController::class, 'restaurar'])->whereNumber('id')->middleware('permiso:usuarios.eliminar');
+    Route::get('usuarios/{id}/seguridad', [UsuarioController::class, 'seguridad'])->whereNumber('id')->middleware('permiso:usuarios.editar');
+    Route::put('usuarios/{id}/desbloquear', [UsuarioController::class, 'desbloquear'])->whereNumber('id')->middleware('permiso:usuarios.editar');
+    Route::put('usuarios/{id}/cerrar-sesiones', [UsuarioController::class, 'cerrarSesiones'])->whereNumber('id')->middleware('permiso:usuarios.editar');
     Route::get('roles', [RolController::class, 'matriz'])->middleware('permiso:roles.ver');
     Route::post('roles', [RolController::class, 'store'])->middleware('permiso:roles.editar');
     Route::put('roles/{id}', [RolController::class, 'update'])->middleware('permiso:roles.editar');
@@ -92,6 +98,8 @@ Route::middleware(['auth:sanctum', 'bitacora'])->group(function () {
     Route::get('bitacora/resumen', [BitacoraController::class, 'resumen'])->middleware('permiso:bitacora.ver');
     Route::get('auditoria', [BitacoraController::class, 'auditoria'])->middleware('permiso:auditoria.ver');
     Route::post('auditoria/{id}/restaurar', [BitacoraController::class, 'restaurar'])->middleware('permiso:auditoria.restaurar');
+    Route::post('auditoria/{id}/deshacer', [BitacoraController::class, 'deshacer'])->whereNumber('id')->middleware('permiso:auditoria.restaurar');
+    Route::post('auditoria/restaurar-eliminados', [BitacoraController::class, 'restaurarEliminados'])->middleware('permiso:auditoria.restaurar');
 
     // Configuración semestral
     crud('laboratorios', LaboratorioController::class, 'laboratorios');

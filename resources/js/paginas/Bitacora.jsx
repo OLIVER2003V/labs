@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { RotateCcw, Search } from 'lucide-react';
+import { AlertTriangle, History, RotateCcw, Search, Undo2 } from 'lucide-react';
 import api, { mensajeError } from '../lib/api';
 import { fechaHora } from '../lib/formato';
 import { useAuth } from '../contexto/AuthContext';
@@ -94,27 +94,83 @@ export function Bitacora() {
     );
 }
 
-const TABLAS = ['usuarios', 'roles', 'rol_permiso', 'laboratorios', 'semestres', 'materias', 'horarios', 'reservas', 'equipos', 'incidencias',
-    'objetos_encontrados', 'turnos', 'asistencias', 'conceptos_pago', 'planes_pago', 'cuotas', 'transacciones', 'multas'];
+const TABLAS = ['usuarios', 'roles', 'rol_permiso', 'laboratorios', 'semestres', 'materias', 'horarios', 'reservas', 'equipos', 'equipos_red',
+    'incidencias', 'objetos_encontrados', 'turnos', 'asistencias', 'permisos_auxiliar', 'permutas', 'conceptos_pago', 'planes_pago', 'cuotas',
+    'transacciones', 'multas'];
 
-/** Auditoría: cambios capturados por los TRIGGERS de PostgreSQL (incluye cambios hechos por SQL directo) */
+/** "2026-11-25T14:30" de hace N minutos (para el campo datetime-local) */
+const haceMinutos = (n) => {
+    const d = new Date(Date.now() - n * 60000);
+    return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+};
+
+/**
+ * Auditoría: cambios capturados por los TRIGGERS de PostgreSQL (incluye cambios hechos por SQL directo).
+ * CU10: filtrar los cambios "Directo en BD" (posible sabotaje), deshacer una modificación y restaurar en lote lo eliminado.
+ */
 export function Auditoria() {
-    const { puede } = useAuth();
+    const { puede, refrescarAvisos } = useAuth();
     const notificar = useToast();
-    const [f, setF] = useState({ tabla: '', operacion: '' });
+    const [f, setF] = useState({ tabla: '', operacion: '', origen: '', desde: '', hasta: '' });
     const filtros = Object.fromEntries(Object.entries(f).filter(([, v]) => v));
     const { datos, setPagina, cargar } = useListado('/auditoria', filtros);
     const [detalle, setDetalle] = useState(null);
-    const [restaurar, setRestaurar] = useState(null);
+    const [accion, setAccion] = useState(null); // { tipo: 'restaurar' | 'deshacer', a }
+    const [lote, setLote] = useState(null);     // formulario de restauración en lote
+    const [resultado, setResultado] = useState(null);
+    const [enviando, setEnviando] = useState(false);
+    const restaura = puede('auditoria.restaurar');
+
+    useEffect(() => {
+        if (f.origen === 'directo') refrescarAvisos?.();
+    }, [f.origen, refrescarAvisos]);
+
+    const ejecutar = async () => {
+        try {
+            notificar((await api.post(`/auditoria/${accion.a.id}/${accion.tipo}`)).data.message);
+            cargar();
+        } catch (e) {
+            notificar(mensajeError(e), 'error');
+        }
+        setAccion(null);
+    };
+
+    const restaurarLote = async () => {
+        setEnviando(true);
+        try {
+            const { data } = await api.post('/auditoria/restaurar-eliminados', {
+                desde: lote.desde.replace('T', ' '), hasta: lote.hasta ? lote.hasta.replace('T', ' ') : undefined,
+                tabla: lote.tabla || undefined, solo_directos: lote.solo_directos,
+            });
+            setResultado(data);
+            setLote(null);
+            cargar();
+        } catch (e) {
+            notificar(mensajeError(e), 'error');
+        } finally {
+            setEnviando(false);
+        }
+    };
 
     return (
         <>
             <Encabezado
                 titulo="Auditoría de cambios"
-                descripcion="Los triggers de la base de datos registran cada INSERT, UPDATE y DELETE, aunque se hagan directamente por SQL. Un registro eliminado puede restaurarse desde aquí."
-            />
+                descripcion="Los triggers de la base de datos registran cada INSERT, UPDATE y DELETE, aunque se hagan directamente por SQL. En rojo, los cambios hechos fuera del sistema. Un borrado se puede restaurar y una modificación se puede deshacer."
+            >
+                {restaura && (
+                    <button className="btn btn-primario" onClick={() => setLote({ desde: haceMinutos(60), hasta: '', tabla: '', solo_directos: true })}>
+                        <History className="size-4" aria-hidden /> Restaurar eliminados
+                    </button>
+                )}
+            </Encabezado>
             <div className="tarjeta overflow-hidden">
                 <div className="flex flex-wrap gap-3 border-b border-borde p-3">
+                    <select className="campo w-auto" aria-label="Origen" value={f.origen} onChange={(e) => setF({ ...f, origen: e.target.value })}>
+                        <option value="">Origen: todos</option>
+                        <option value="directo">Solo cambios directos en BD</option>
+                        <option value="sistema">Solo desde el sistema</option>
+                    </select>
                     <select className="campo w-auto" aria-label="Tabla" value={f.tabla} onChange={(e) => setF({ ...f, tabla: e.target.value })}>
                         <option value="">Tabla: todas</option>
                         {TABLAS.map((t) => <option key={t}>{t}</option>)}
@@ -123,26 +179,33 @@ export function Auditoria() {
                         <option value="">Operación: todas</option>
                         {['INSERT', 'UPDATE', 'DELETE'].map((t) => <option key={t}>{t}</option>)}
                     </select>
+                    <label className="flex items-center gap-2 text-sm">Desde <input type="date" className="campo w-auto" value={f.desde} onChange={(e) => setF({ ...f, desde: e.target.value })} /></label>
+                    <label className="flex items-center gap-2 text-sm">Hasta <input type="date" className="campo w-auto" value={f.hasta} onChange={(e) => setF({ ...f, hasta: e.target.value })} /></label>
                 </div>
-                {!datos ? <Cargando /> : !datos.data.length ? <Vacio texto="Aún no hay cambios registrados." /> : (
+                {!datos ? <Cargando /> : !datos.data.length ? <Vacio texto="No hay cambios para ese filtro." /> : (
                     <div className="overflow-x-auto">
                         <table className="tabla w-full text-sm">
                             <thead><tr><th>Fecha</th><th>Tabla</th><th>Operación</th><th>Registro</th><th>Usuario del sistema</th><th>Usuario BD</th><th className="text-right">Acciones</th></tr></thead>
                             <tbody>
                                 {datos.data.map((a) => (
-                                    <tr key={a.id}>
+                                    <tr key={a.id} className={a.usuario_app_id ? '' : 'bg-peligro-tenue/40'}>
                                         <td className="whitespace-nowrap">{fechaHora(a.fecha)}</td>
                                         <td><code>{a.tabla}</code></td>
                                         <td><Badge valor={a.operacion} /></td>
                                         <td>#{a.registro_id}</td>
-                                        <td className={a.usuario_app_id ? '' : 'font-semibold text-peligro'}>{a.usuario_app}</td>
+                                        <td className={a.usuario_app_id ? '' : 'font-semibold text-peligro'}>{a.usuario_app_id ? a.usuario_app : <span className="flex items-center gap-1"><AlertTriangle className="size-4" aria-hidden /> Directo en BD</span>}</td>
                                         <td><code>{a.usuario_db}</code></td>
                                         <td>
                                             <div className="flex justify-end gap-1">
                                                 <button className="btn btn-fantasma btn-sm" onClick={() => setDetalle(a)}>Ver cambios</button>
-                                                {a.operacion === 'DELETE' && puede('auditoria.restaurar') && (
-                                                    <button className="btn btn-fantasma btn-sm text-exito" onClick={() => setRestaurar(a)}>
+                                                {a.operacion === 'DELETE' && restaura && (
+                                                    <button className="btn btn-fantasma btn-sm text-exito" onClick={() => setAccion({ tipo: 'restaurar', a })}>
                                                         <RotateCcw className="size-4" aria-hidden /> Restaurar
+                                                    </button>
+                                                )}
+                                                {a.operacion === 'UPDATE' && restaura && (
+                                                    <button className="btn btn-fantasma btn-sm text-alerta" onClick={() => setAccion({ tipo: 'deshacer', a })}>
+                                                        <Undo2 className="size-4" aria-hidden /> Deshacer
                                                     </button>
                                                 )}
                                             </div>
@@ -172,22 +235,60 @@ export function Auditoria() {
                 </div>
             </Modal>
             <Confirmar
-                abierto={!!restaurar}
+                abierto={!!accion}
                 peligro={false}
-                titulo="Restaurar registro eliminado"
-                mensaje={`Se volverá a insertar el registro #${restaurar?.registro_id} en la tabla ${restaurar?.tabla} con los datos que tenía antes de eliminarse.`}
-                textoBoton="Restaurar"
-                onCerrar={() => setRestaurar(null)}
-                onConfirmar={async () => {
-                    try {
-                        notificar((await api.post(`/auditoria/${restaurar.id}/restaurar`)).data.message);
-                        cargar();
-                    } catch (e) {
-                        notificar(mensajeError(e), 'error');
-                    }
-                    setRestaurar(null);
-                }}
+                titulo={accion?.tipo === 'deshacer' ? 'Deshacer modificación' : 'Restaurar registro eliminado'}
+                mensaje={accion?.tipo === 'deshacer'
+                    ? `El registro #${accion?.a.registro_id} de ${accion?.a.tabla} volverá a los valores que tenía antes de este cambio (los campos marcados en "Ver cambios").`
+                    : `Se volverá a insertar el registro #${accion?.a.registro_id} en la tabla ${accion?.a.tabla} con los datos que tenía antes de eliminarse.`}
+                textoBoton={accion?.tipo === 'deshacer' ? 'Deshacer' : 'Restaurar'}
+                onCerrar={() => setAccion(null)}
+                onConfirmar={ejecutar}
             />
+
+            <Modal abierto={!!lote} titulo="Restaurar registros eliminados" onCerrar={() => setLote(null)}>
+                <p className="mb-4 text-sm text-suave">Vuelve a insertar todo lo que se eliminó en ese período (por ejemplo, si alguien borró datos por SQL). Primero los registros “padre” y después los que dependen de ellos.</p>
+                {lote && (
+                    <div className="grid gap-4 sm:grid-cols-2">
+                        <label className="text-sm"><span className="etiqueta">Eliminados desde</span>
+                            <input type="datetime-local" className="campo" value={lote.desde} onChange={(e) => setLote({ ...lote, desde: e.target.value })} />
+                        </label>
+                        <label className="text-sm"><span className="etiqueta">Hasta (opcional)</span>
+                            <input type="datetime-local" className="campo" value={lote.hasta} onChange={(e) => setLote({ ...lote, hasta: e.target.value })} />
+                        </label>
+                        <label className="text-sm sm:col-span-2"><span className="etiqueta">Tabla</span>
+                            <select className="campo" value={lote.tabla} onChange={(e) => setLote({ ...lote, tabla: e.target.value })}>
+                                <option value="">Todas</option>
+                                {TABLAS.filter((t) => t !== 'usuarios').map((t) => <option key={t}>{t}</option>)}
+                            </select>
+                        </label>
+                        <label className="flex items-center gap-2 text-sm sm:col-span-2">
+                            <input type="checkbox" className="size-4 accent-[var(--c-primario)]" checked={lote.solo_directos} onChange={(e) => setLote({ ...lote, solo_directos: e.target.checked })} />
+                            Solo lo eliminado directamente en la base de datos (fuera del sistema)
+                        </label>
+                    </div>
+                )}
+                <div className="mt-5 flex justify-end gap-2">
+                    <button className="btn btn-secundario" onClick={() => setLote(null)}>Cancelar</button>
+                    <button className="btn btn-primario" disabled={enviando || !lote?.desde} onClick={restaurarLote}>
+                        <RotateCcw className="size-4" aria-hidden /> {enviando ? 'Restaurando…' : 'Restaurar'}
+                    </button>
+                </div>
+            </Modal>
+
+            <Modal abierto={!!resultado} titulo="Resultado de la restauración" onCerrar={() => setResultado(null)}>
+                <p className="font-medium">{resultado?.message}</p>
+                {resultado && Object.keys(resultado.por_tabla ?? {}).length > 0 && (
+                    <ul className="mt-3 list-disc pl-5 text-sm">{Object.entries(resultado.por_tabla).map(([t, n]) => <li key={t}><code>{t}</code>: {n}</li>)}</ul>
+                )}
+                {resultado?.errores?.length > 0 && (
+                    <div className="mt-3 rounded-tema border border-alerta bg-alerta-tenue p-3 text-sm">
+                        <p className="font-semibold">No se pudieron restaurar:</p>
+                        <ul className="list-disc pl-5">{resultado.errores.map((e) => <li key={e}>{e}</li>)}</ul>
+                    </div>
+                )}
+                <div className="mt-5 flex justify-end"><button className="btn btn-primario" onClick={() => setResultado(null)}>Cerrar</button></div>
+            </Modal>
         </>
     );
 }

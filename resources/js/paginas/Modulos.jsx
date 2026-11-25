@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Check, FileSpreadsheet, HandHelping, Lock, PlayCircle, RotateCcw, X } from 'lucide-react';
+import { Check, FileSpreadsheet, HandHelping, Lock, LogOut, PlayCircle, RotateCcw, ShieldAlert, Unlock, X } from 'lucide-react';
 import ImportarHorario from './ImportarHorario';
 import CrudPage from '../componentes/CrudPage';
 import { Badge, Confirmar, Formulario, Modal, useToast } from '../componentes/ui';
@@ -452,6 +452,63 @@ function BotonRestaurarUsuario({ fila, recargar }) {
     );
 }
 
+/** CU10: estado de seguridad de una cuenta (bloqueo por intentos fallidos y sesiones abiertas) */
+function BotonSeguridad({ fila }) {
+    const { puede, usuario } = useAuth();
+    const notificar = useToast();
+    const [info, setInfo] = useState(null);
+    const [abierto, setAbierto] = useState(false);
+    if (!puede('usuarios.editar') || fila.deleted_at || fila.estado === 'PENDIENTE') return null;
+
+    const cargar = async () => {
+        try {
+            setInfo((await api.get(`/usuarios/${fila.id}/seguridad`)).data);
+        } catch (e) {
+            notificar(mensajeError(e), 'error');
+        }
+    };
+    const accion = async (url) => {
+        try {
+            notificar((await api.put(url)).data.message);
+            cargar();
+        } catch (e) {
+            notificar(mensajeError(e), 'error');
+        }
+    };
+
+    return (
+        <>
+            <button className="btn btn-fantasma btn-sm" title="Seguridad de la cuenta" aria-label={`Seguridad de ${fila.nombre_completo}`} onClick={() => { setInfo(null); setAbierto(true); cargar(); }}>
+                <ShieldAlert className="size-4" aria-hidden />
+            </button>
+            <Modal abierto={abierto} titulo={`Seguridad: ${fila.nombre_completo}`} onCerrar={() => setAbierto(false)}>
+                {!info ? <p className="text-suave">Cargando…</p> : (
+                    <div className="space-y-4">
+                        <div className={`rounded-tema border p-3 text-sm ${info.bloqueado ? 'border-peligro bg-peligro-tenue text-peligro' : 'border-borde'}`}>
+                            {info.bloqueado
+                                ? <><strong>Cuenta bloqueada</strong> por intentos fallidos. Se desbloquea sola en {info.minutos_restantes} min.</>
+                                : <>Sin bloqueo. Intentos fallidos recientes: {info.intentos_fallidos}.</>}
+                            <span className="block text-xs text-suave">Último acceso: {info.ultimo_acceso ? fechaHora(info.ultimo_acceso) : 'nunca'}</span>
+                        </div>
+                        <div>
+                            <p className="etiqueta">Sesiones abiertas ({info.sesiones.length})</p>
+                            {info.sesiones.length ? (
+                                <ul className="text-sm">{info.sesiones.map((x, i) => <li key={i}>{x.dispositivo === 'spa' ? 'Sesión anterior' : x.dispositivo} <span className="text-xs text-suave">· último uso {x.ultimo_uso ? fechaHora(x.ultimo_uso) : '—'}</span></li>)}</ul>
+                            ) : <p className="text-sm text-suave">Ninguna.</p>}
+                        </div>
+                        <div className="flex flex-wrap justify-end gap-2">
+                            {info.bloqueado && <button className="btn btn-secundario" onClick={() => accion(`/usuarios/${fila.id}/desbloquear`)}><Unlock className="size-4" aria-hidden /> Desbloquear</button>}
+                            {info.sesiones.length > 0 && fila.id !== usuario.id && (
+                                <button className="btn btn-peligro" onClick={() => accion(`/usuarios/${fila.id}/cerrar-sesiones`)}><LogOut className="size-4" aria-hidden /> Cerrar todas sus sesiones</button>
+                            )}
+                        </div>
+                    </div>
+                )}
+            </Modal>
+        </>
+    );
+}
+
 export const Usuarios = () => (
     <CrudPage
         titulo="Usuarios"
@@ -464,7 +521,7 @@ export const Usuarios = () => (
             { name: 'estado', label: 'Estado', opciones: ['PENDIENTE', 'ACTIVO', 'INACTIVO'] },
             { name: 'eliminados', label: 'Registros', textoTodos: 'Usuarios vigentes', opciones: [{ value: 1, label: 'Usuarios eliminados' }] },
         ]}
-        acciones={(fila, recargar) => <><AccionesSolicitud fila={fila} recargar={recargar} /><BotonRestaurarUsuario fila={fila} recargar={recargar} /></>}
+        acciones={(fila, recargar) => <><AccionesSolicitud fila={fila} recargar={recargar} /><BotonSeguridad fila={fila} /><BotonRestaurarUsuario fila={fila} recargar={recargar} /></>}
         columnas={[
             { key: 'codigo', label: 'Código' },
             { key: 'nombre', label: 'Nombre', render: (f) => <><strong>{f.nombre_completo}</strong><span className="block text-xs text-suave">{f.email}</span></> },

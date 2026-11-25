@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { LogOut, MonitorSmartphone } from 'lucide-react';
 import api, { erroresCampos, mensajeError } from '../lib/api';
 import { P, validar } from '../lib/validar';
 import { useAuth } from '../contexto/AuthContext';
-import { Encabezado, Formulario, Tarjeta, useToast } from '../componentes/ui';
+import { fechaHora } from '../lib/formato';
+import { Cargando, Encabezado, Formulario, Tarjeta, useToast } from '../componentes/ui';
 
 const CAMPOS_PERFIL = [
     { name: 'nombre', label: 'Nombre(s)', requerido: true, min: 2, max: 60, patron: P.soloLetras, mensajePatron: 'Solo letras y espacios.' },
@@ -45,6 +47,49 @@ function Seccion({ titulo, campos, inicial, enviar, textoBoton, limpiar }) {
     );
 }
 
+/** CU10: dispositivos donde la cuenta tiene la sesión abierta; se puede cerrar cualquiera o todas las demás */
+function SesionesActivas() {
+    const notificar = useToast();
+    const [sesiones, setSesiones] = useState(null);
+    const cargar = useCallback(() => {
+        api.get('/perfil/sesiones').then((r) => setSesiones(r.data)).catch(() => setSesiones([]));
+    }, []);
+    useEffect(cargar, [cargar]);
+
+    const cerrar = async (url) => {
+        try {
+            notificar((await api.delete(url)).data.message);
+            cargar();
+        } catch (e) {
+            notificar(mensajeError(e), 'error');
+        }
+    };
+    const otras = sesiones?.filter((x) => !x.actual).length ?? 0;
+
+    return (
+        <Tarjeta
+            titulo="Sesiones activas"
+            acciones={otras > 0 && <button className="btn btn-secundario btn-sm" onClick={() => cerrar('/perfil/sesiones')}><LogOut className="size-4" aria-hidden /> Cerrar las demás ({otras})</button>}
+        >
+            <p className="mb-3 text-sm text-suave">Si ve un dispositivo que no reconoce, ciérrelo y cambie su contraseña (al cambiarla se cierran todas las demás sesiones).</p>
+            {sesiones === null ? <Cargando /> : (
+                <ul className="divide-y divide-borde">
+                    {sesiones.map((x) => (
+                        <li key={x.id} className="flex flex-wrap items-center gap-3 py-3">
+                            <MonitorSmartphone className="size-6 shrink-0 text-primario" aria-hidden />
+                            <div className="min-w-0 flex-1">
+                                <p className="font-medium">{x.dispositivo === 'spa' ? 'Sesión anterior' : x.dispositivo} {x.actual && <span className="ml-1 rounded-full bg-exito-tenue px-2 py-0.5 text-xs font-semibold text-exito">Este dispositivo</span>}</p>
+                                <p className="text-xs text-suave">Inició: {fechaHora(x.iniciada)} · Último uso: {x.ultimo_uso ? fechaHora(x.ultimo_uso) : '—'} · Expira: {x.expira ? fechaHora(x.expira) : '—'}</p>
+                            </div>
+                            {!x.actual && <button className="btn btn-fantasma btn-sm text-peligro" onClick={() => cerrar(`/perfil/sesiones/${x.id}`)}>Cerrar</button>}
+                        </li>
+                    ))}
+                </ul>
+            )}
+        </Tarjeta>
+    );
+}
+
 export default function Perfil() {
     const { usuario, refrescar } = useAuth();
     return (
@@ -70,6 +115,7 @@ export default function Perfil() {
                     limpiar
                     enviar={(v) => api.put('/perfil/password', v)}
                 />
+                <div className="lg:col-span-2"><SesionesActivas /></div>
             </div>
         </>
     );
