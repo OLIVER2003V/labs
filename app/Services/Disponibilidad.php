@@ -91,6 +91,33 @@ class Disponibilidad
             ->values()->all();
     }
 
+    /** Igual que libres() pero con el id, para que la pantalla ofrezca botones "usar este laboratorio" */
+    public static function alternativas(string $fecha, string $horaInicio, string $horaFin, ?int $excepto = null): array
+    {
+        return collect(self::franja($fecha, $horaInicio, $horaFin))
+            ->filter(fn ($l) => $l['libre'] && $l['laboratorio']['id'] !== $excepto)
+            ->map(fn ($l) => ['id' => $l['laboratorio']['id'], 'codigo' => $l['laboratorio']['codigo'], 'nombre' => $l['laboratorio']['nombre']])
+            ->values()->all();
+    }
+
+    /**
+     * Reservas futuras (pendientes o aprobadas) que caen sobre una clase semanal:
+     * mismo laboratorio, mismo día de la semana, horas superpuestas y dentro de las fechas del semestre.
+     * Regla FICCT: la clase del horario base tiene prioridad, esas reservas se cancelan.
+     */
+    public static function reservasSobreClase(Semestre $semestre, int $laboratorioId, int $dia, string $horaInicio, string $horaFin): \Illuminate\Support\Collection
+    {
+        $desde = max(now()->toDateString(), $semestre->fecha_inicio->format('Y-m-d'));
+
+        return Reserva::with(['laboratorio', 'solicitante'])
+            ->where('laboratorio_id', $laboratorioId)
+            ->whereIn('estado', ['PENDIENTE', 'APROBADA'])
+            ->whereDate('fecha', '>=', $desde)->whereDate('fecha', '<=', $semestre->fecha_fin->format('Y-m-d'))
+            ->whereRaw('EXTRACT(ISODOW FROM fecha) = ?', [$dia])
+            ->where('hora_inicio', '<', self::hms($horaFin))->where('hora_fin', '>', self::hms($horaInicio))
+            ->orderBy('fecha')->orderBy('hora_inicio')->get();
+    }
+
     /** Agenda del día: por laboratorio, todas las clases y reservas (para la vista de calendario) */
     public static function agenda(string $fecha): array
     {

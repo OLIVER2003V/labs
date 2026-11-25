@@ -130,7 +130,7 @@ export default function ImportarHorario({ abierto, onCerrar, onImportado }) {
                                         <td>{f.valores[4]}<span className="block text-xs text-suave">{f.valores[5]}</span></td>
                                         <td>{f.valores[6]}</td>
                                         <td>{f.ok ? f.datos.docente : f.valores[7]}</td>
-                                        <td className={f.ok ? 'text-exito' : 'font-medium text-peligro'}>
+                                        <td className={!f.ok ? 'font-medium text-peligro' : f.reservas ? 'font-medium text-alerta' : 'text-exito'}>
                                             <span className="flex gap-1">{f.ok ? <CheckCircle2 className="mt-0.5 size-4 shrink-0" aria-hidden /> : <XCircle className="mt-0.5 size-4 shrink-0" aria-hidden />} {f.mensaje}</span>
                                         </td>
                                     </tr>

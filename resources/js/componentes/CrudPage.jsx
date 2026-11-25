@@ -41,6 +41,7 @@ export default function CrudPage({
     const [enviando, setEnviando] = useState(false);
     const [borrar, setBorrar] = useState(null);
     const [confirmacion, setConfirmacion] = useState(null); // { message, detalle[] } cuando el servidor pide confirmar
+    const [alternativas, setAlternativas] = useState(null); // ante un choque: otros laboratorios libres [{id, codigo, nombre, campo}]
     const [exportando, setExportando] = useState(false);
 
     /** Exporta a CSV (Excel) TODOS los registros del filtro actual, no solo la página visible */
@@ -109,6 +110,7 @@ export default function CrudPage({
 
     const abrir = (fila = null) => {
         setErrores({});
+        setAlternativas(null);
         setForm(fila ?? {});
         setValores(fila ? (aFormulario ? aFormulario(fila) : Object.fromEntries(campos.map((c) => [c.name, fila[c.name] ?? '']))) : { ...inicial });
     };
@@ -121,6 +123,7 @@ export default function CrudPage({
             return;
         }
         setEnviando(true);
+        setAlternativas(null);
         try {
             const datosEnvio = Object.fromEntries(Object.entries(valores).map(([k, v]) => [k, v === '' ? null : v]));
             if (confirmar) datosEnvio.confirmar = true;
@@ -135,6 +138,11 @@ export default function CrudPage({
                 return;
             }
             setErrores(erroresCampos(err));
+            // Choque de horario: el servidor propone otros laboratorios libres → se muestran como botones
+            if (err.response?.data?.alternativas) {
+                setAlternativas({ mensaje: err.response.data.message, opciones: err.response.data.alternativas });
+                return;
+            }
             notificar(mensajeError(err), 'error');
         } finally {
             setEnviando(false);
@@ -250,6 +258,35 @@ export default function CrudPage({
             </div>
 
             <Modal abierto={!!form} titulo={form?.id ? `Editar ${singular}` : `${femenino ? 'Nueva' : 'Nuevo'} ${singular}`} onCerrar={() => setForm(null)} ancho="max-w-2xl">
+                {alternativas && (
+                    <div className="mb-4 rounded-tema border border-peligro bg-peligro-tenue p-3 text-sm" role="alert">
+                        <p className="font-medium text-peligro">{alternativas.mensaje}</p>
+                        {alternativas.opciones.length ? (
+                            <>
+                                <p className="mt-2">Estos laboratorios están libres en esa franja. Elija uno para usarlo:</p>
+                                <div className="mt-2 flex flex-wrap gap-2">
+                                    {alternativas.opciones.map((o) => (
+                                        <button
+                                            key={o.id}
+                                            type="button"
+                                            className="btn btn-secundario btn-sm"
+                                            title={o.nombre}
+                                            onClick={() => {
+                                                setValores((v) => ({ ...v, [o.campo]: String(o.id) }));
+                                                setAlternativas(null);
+                                                notificar(`Se eligió ${o.codigo}. Revise y presione Guardar.`);
+                                            }}
+                                        >
+                                            {o.codigo}
+                                        </button>
+                                    ))}
+                                </div>
+                            </>
+                        ) : (
+                            <p className="mt-2">No hay otros laboratorios libres en esa franja: pruebe otro horario.</p>
+                        )}
+                    </div>
+                )}
                 <Formulario campos={camposForm} valores={valores} setValores={setValores} errores={errores} onEnviar={() => guardar()} enviando={enviando} onCancelar={() => setForm(null)} />
             </Modal>
 

@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\DB;
  * Reglas por fila: laboratorio existente y DISPONIBLE · día válido (LUNES…SÁBADO o 1…6) · horas 07:00–22:00 y fin > inicio ·
  * sigla y grupo válidos · docente activo con rol Docente (por código o correo) · sin choque de laboratorio ni de docente
  * con el horario del semestre NI con otras filas del mismo archivo. La materia se crea si su sigla es nueva.
+ * Si una clase cae sobre reservas futuras, la clase tiene prioridad: se avisa en la revisión y al importar se cancelan.
  */
 class ImportadorHorario
 {
@@ -28,6 +29,7 @@ class ImportadorHorario
     private array $docentes;     // código y correo (minúsculas) → User
     private array $materias;     // sigla → id
     private array $aceptadas = []; // filas válidas del archivo, para detectar choques entre ellas
+    private array $reservas = [];  // número de fila → reservas que esa clase pisaría
 
     public function __construct(private Semestre $semestre)
     {
@@ -43,6 +45,8 @@ class ImportadorHorario
     /** @return array{filas: array, validas: int, errores: int} */
     public function revisar(array $filas): array
     {
+        $this->aceptadas = [];
+        $this->reservas = [];
         $resultado = [];
         foreach ($filas as $f) {
             $resultado[] = $this->validarFila($f['fila'], $f['valores']);
@@ -56,11 +60,12 @@ class ImportadorHorario
     }
 
     /** Guarda las filas válidas. @return array{creadas: int, materias_nuevas: int, errores: int, filas: array} */
-    public function importar(array $filas): array
+    public function importar(array $filas, ?int $porUsuarioId = null): array
     {
         $revision = $this->revisar($filas);
         $materiasNuevas = 0;
-        DB::transaction(function () use ($revision, &$materiasNuevas) {
+        $canceladas = 0;
+        DB::transaction(function () use ($revision, &$materiasNuevas, &$canceladas, $porUsuarioId) {
             foreach ($revision['filas'] as $r) {
                 if (! $r['ok']) {
                     continue;
@@ -75,10 +80,15 @@ class ImportadorHorario
                     'docente_id' => $d['docente_id'], 'grupo' => $d['grupo'], 'dia_semana' => $d['dia'],
                     'hora_inicio' => $d['inicio'], 'hora_fin' => $d['fin'],
                 ]);
+                if (! empty($this->reservas[$r['fila']])) {
+                    $canceladas += Notificador::cancelarReservasAfectadas($this->reservas[$r['fila']]->where('estado', '!=', 'CANCELADA'),
+                        "el {$r['valores'][0]} tiene asignada la clase {$d['sigla']}-{$d['grupo']} en ese horario", $porUsuarioId);
+                }
             }
         });
 
-        return ['creadas' => $revision['validas'], 'materias_nuevas' => $materiasNuevas, 'errores' => $revision['errores'], 'filas' => $revision['filas']];
+        return ['creadas' => $revision['validas'], 'materias_nuevas' => $materiasNuevas, 'reservas_canceladas' => $canceladas,
+            'errores' => $revision['errores'], 'filas' => $revision['filas']];
     }
 
     private function validarFila(int $num, array $v): array
@@ -149,7 +159,13 @@ class ImportadorHorario
             'materia' => mb_substr(trim($materiaTxt), 0, 100), 'grupo' => $grupo, 'docente_id' => $docente->id];
         $this->aceptadas[] = $datos;
 
-        return $res(null, $datos + ['docente' => $docente->nombre_completo]);
+        // La clase tiene prioridad sobre reservas puntuales: se avisa cuántas se cancelarían
+        $this->reservas[$num] = Disponibilidad::reservasSobreClase($this->semestre, $lab->id, $dia, $ini, $fin);
+        $n = $this->reservas[$num]->count();
+
+        return ['fila' => $num, 'valores' => $v, 'ok' => true, 'reservas' => $n,
+            'mensaje' => $n ? "Lista para importar. Se cancelarán $n reserva(s) en ese horario." : 'Lista para importar',
+            'datos' => $datos + ['docente' => $docente->nombre_completo]];
     }
 
     private function dia(string $txt): ?int

@@ -11,12 +11,16 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 /**
  * CU4 - Reservas, aprobación y resolución de conflictos.
  * Flujo: solicitar (PENDIENTE) → el Encargado aprueba o rechaza → el solicitante puede cancelar.
- * Regla FICCT: ante un choque conserva el laboratorio el docente con horario asignado; se proponen laboratorios libres.
+ *  - Si quien reserva puede aprobar (Encargado), su reserva queda APROBADA directamente.
+ *  - Al aprobar una reserva, las demás solicitudes PENDIENTES que piden ese laboratorio y horario se rechazan solas.
+ *  - Ante un choque se proponen laboratorios libres en la misma franja (botones en el formulario).
+ * Regla FICCT: la clase del horario base tiene prioridad (ver HorarioController: cancela las reservas que pisa).
  */
 class ReservaController extends CrudController
 {
@@ -60,30 +64,65 @@ class ReservaController extends CrudController
 
         $conflictos = Disponibilidad::conflictos($lab->id, $datos['fecha'], $datos['hora_inicio'], $datos['hora_fin']);
         if ($conflictos) {
-            $libres = Disponibilidad::libres($datos['fecha'], $datos['hora_inicio'], $datos['hora_fin'], $lab->id);
+            $alternativas = Disponibilidad::alternativas($datos['fecha'], $datos['hora_inicio'], $datos['hora_fin'], $lab->id);
             abort(response()->json([
                 'message' => "El laboratorio {$lab->codigo} no está disponible: ".$conflictos[0]['detalle'].'.',
                 'conflictos' => $conflictos,
-                'sugerencias' => $libres,
+                'sugerencias' => array_map(fn ($a) => "{$a['codigo']} - {$a['nombre']}", $alternativas),
+                'alternativas' => array_map(fn ($a) => $a + ['campo' => 'laboratorio_id'], $alternativas),
             ], 422));
         }
 
-        $datos['solicitante_id'] = $request->user()->id;
+        $usuario = $request->user();
+        $datos['solicitante_id'] = $usuario->id;
         $datos['estado'] = 'PENDIENTE';
+        // El Encargado no necesita aprobarse a sí mismo
+        if ($usuario->tienePermiso('reservas.aprobar')) {
+            $datos['estado'] = 'APROBADA';
+            $datos['resuelto_por'] = $usuario->id;
+            $datos['observacion'] = 'Aprobada al registrarla (la registró quien aprueba reservas).';
+        }
 
         return $datos;
     }
 
-    /** Al crear una solicitud se avisa a quienes pueden aprobarla (Encargados) */
+    /** Solicitud nueva → aviso a los Encargados. Reserva del Encargado (ya aprobada) → se rechazan las solicitudes que chocan. */
     protected function despuesDeGuardar(Model $registro, Request $request, bool $nuevo): void
     {
+        if ($nuevo && $registro->estado === 'APROBADA') {
+            $n = $this->rechazarSolicitudesQueChocan($registro, $request->user()->id);
+            $this->mensaje = 'Reserva registrada y aprobada.'.($n ? " Se rechazaron $n solicitud(es) pendiente(s) que pedían ese horario." : '');
+
+            return;
+        }
         if ($nuevo) {
+            $this->mensaje = 'Solicitud enviada. El Encargado de Laboratorios la revisará y recibirá una notificación.';
             $r = $registro->load(['laboratorio', 'solicitante']);
             Notificador::aQuienesPuedan('reservas.aprobar', "Nueva solicitud de reserva #{$r->id}",
                 "{$r->solicitante->nombre_completo} solicita {$r->laboratorio->codigo} el ".$r->fecha->format('d/m/Y')
                 .' de '.substr($r->hora_inicio, 0, 5).' a '.substr($r->hora_fin, 0, 5)." para {$r->tipo}: {$r->motivo}.",
                 '/reservas', $r->id, $request->user()->id);
         }
+    }
+
+    /**
+     * Una vez aprobada una reserva, las demás solicitudes PENDIENTES del mismo laboratorio, fecha y horario
+     * ya no se pueden cumplir: se rechazan y se avisa a cada solicitante.
+     */
+    private function rechazarSolicitudesQueChocan(Reserva $aprobada, int $porUsuarioId): int
+    {
+        $otras = Reserva::with('laboratorio')
+            ->where('laboratorio_id', $aprobada->laboratorio_id)->whereDate('fecha', $aprobada->fecha->format('Y-m-d'))
+            ->where('estado', 'PENDIENTE')->where('id', '<>', $aprobada->id)
+            ->where('hora_inicio', '<', $aprobada->hora_fin)->where('hora_fin', '>', $aprobada->hora_inicio)
+            ->get();
+        foreach ($otras as $r) {
+            $motivo = "El laboratorio fue asignado a la reserva #{$aprobada->id} ({$aprobada->tipo}) en ese horario.";
+            $r->update(['estado' => 'RECHAZADA', 'resuelto_por' => $porUsuarioId, 'observacion' => $motivo]);
+            $this->avisarSolicitante($r, "Su reserva #{$r->id} fue rechazada", "$motivo Puede elegir otro laboratorio u horario en Disponibilidad.");
+        }
+
+        return $otras->count();
     }
 
     private function avisarSolicitante(Reserva $r, string $titulo, string $mensaje): void
@@ -110,11 +149,18 @@ class ReservaController extends CrudController
             ], 422));
         }
 
-        // El trigger tg_reserva_sin_choque vuelve a verificar en la base de datos
-        $reserva->update(['estado' => 'APROBADA', 'resuelto_por' => $request->user()->id, 'observacion' => $request->input('observacion')]);
-        $this->avisarSolicitante($reserva, "Su reserva #{$reserva->id} fue APROBADA", 'El laboratorio queda reservado para usted.');
+        $rechazadas = DB::transaction(function () use ($reserva, $request) {
+            // El trigger tg_reserva_sin_choque vuelve a verificar en la base de datos
+            $reserva->update(['estado' => 'APROBADA', 'resuelto_por' => $request->user()->id, 'observacion' => $request->input('observacion')]);
+            $this->avisarSolicitante($reserva, "Su reserva #{$reserva->id} fue APROBADA", 'El laboratorio queda reservado para usted.');
 
-        return response()->json(['message' => 'Reserva aprobada.', 'data' => $reserva->fresh($this->con)]);
+            return $this->rechazarSolicitudesQueChocan($reserva, $request->user()->id);
+        });
+
+        return response()->json([
+            'message' => 'Reserva aprobada.'.($rechazadas ? " Se rechazaron $rechazadas solicitud(es) que pedían el mismo horario y se avisó a sus solicitantes." : ''),
+            'data' => $reserva->fresh($this->con),
+        ]);
     }
 
     public function rechazar(Request $request, int $id): JsonResponse

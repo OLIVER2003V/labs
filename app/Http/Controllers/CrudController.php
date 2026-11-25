@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Controlador base para los CRUD (crear, listar, ver, actualizar, eliminar).
@@ -36,6 +37,9 @@ abstract class CrudController extends Controller
     protected string $ordenarPor = 'id';
 
     protected string $direccion = 'desc';
+
+    /** Mensaje de respuesta personalizado: un gancho puede cambiarlo (ej: "Reserva aprobada…") */
+    protected ?string $mensaje = null;
 
     /** Reglas de validación. $registro es null al crear. */
     abstract protected function reglas(Request $request, ?Model $registro): array;
@@ -101,12 +105,17 @@ abstract class CrudController extends Controller
     public function store(Request $request): JsonResponse
     {
         $datos = $request->validate($this->reglas($request, null));
-        $datos = $this->antesDeGuardar($datos, $request, null);
-        $registro = ($this->modelo)::create($datos);
-        $this->despuesDeGuardar($registro, $request, true);
+        // Todo en una transacción: si algo falla (ej: un trigger), se deshace también lo que hicieron los ganchos
+        $registro = DB::transaction(function () use ($datos, $request) {
+            $datos = $this->antesDeGuardar($datos, $request, null);
+            $registro = ($this->modelo)::create($datos);
+            $this->despuesDeGuardar($registro, $request, true);
+
+            return $registro;
+        });
 
         return response()->json([
-            'message' => 'Registro creado correctamente.',
+            'message' => $this->mensaje ?? 'Registro creado correctamente.',
             'data' => $registro->load($this->con),
         ], 201);
     }
@@ -115,12 +124,14 @@ abstract class CrudController extends Controller
     {
         $registro = $this->consulta(($this->modelo)::query(), $request)->findOrFail($id);
         $datos = $request->validate($this->reglas($request, $registro));
-        $datos = $this->antesDeGuardar($datos, $request, $registro);
-        $registro->update($datos);
-        $this->despuesDeGuardar($registro, $request, false);
+        DB::transaction(function () use ($datos, $request, $registro) {
+            $datos = $this->antesDeGuardar($datos, $request, $registro);
+            $registro->update($datos);
+            $this->despuesDeGuardar($registro, $request, false);
+        });
 
         return response()->json([
-            'message' => 'Registro actualizado correctamente.',
+            'message' => $this->mensaje ?? 'Registro actualizado correctamente.',
             'data' => $registro->fresh($this->con),
         ]);
     }

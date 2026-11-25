@@ -41,10 +41,14 @@ export const useToast = () => useContext(ToastContext);
 /* ===================== Modal ===================== */
 export function Modal({ abierto, titulo, onCerrar, children, ancho = 'max-w-lg' }) {
     const ref = useRef(null);
+    // onCerrar llega como función nueva en cada render del padre (cada tecla). Si fuera dependencia del efecto,
+    // el foco volvería al primer campo en cada letra. Por eso se guarda en un ref y el efecto solo depende de "abierto".
+    const cerrarRef = useRef(onCerrar);
+    cerrarRef.current = onCerrar;
     useEffect(() => {
         if (!abierto) return;
         const esc = (e) => {
-            if (e.key === 'Escape') onCerrar();
+            if (e.key === 'Escape') cerrarRef.current();
             if (e.key === 'Tab' && ref.current) {
                 const f = [...ref.current.querySelectorAll('button,input,select,textarea,a[href]')].filter((x) => !x.disabled);
                 if (!f.length) return;
@@ -55,7 +59,7 @@ export function Modal({ abierto, titulo, onCerrar, children, ancho = 'max-w-lg' 
         document.addEventListener('keydown', esc);
         ref.current?.querySelector('input,select,textarea,button')?.focus();
         return () => document.removeEventListener('keydown', esc);
-    }, [abierto, onCerrar]);
+    }, [abierto]);
     if (!abierto) return null;
     return (
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 sm:items-center" onMouseDown={(e) => e.target === e.currentTarget && onCerrar()}>
