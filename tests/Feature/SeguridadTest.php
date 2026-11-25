@@ -57,7 +57,7 @@ class SeguridadTest extends SistemaTestCase
     {
         $aux = Rol::where('codigo', 'AUX')->first();
         $permiso = DB::table('permisos')->where('codigo', 'objetos.ver')->value('id');
-        $this->como('admin@ficct.edu.bo');
+        $this->como('encargado@ficct.edu.bo');
         $resto = DB::table('rol_permiso')->where('rol_id', $aux->id)->where('permiso_id', '<>', $permiso)->pluck('permiso_id');
         $this->putJson("/api/roles/{$aux->id}/permisos", ['permisos' => $resto])->assertOk();
 
@@ -65,23 +65,24 @@ class SeguridadTest extends SistemaTestCase
         $this->getJson('/api/objetos')->assertStatus(403);
     }
 
-    public function test_encargado_no_puede_crear_administradores_ni_modificar_al_admin(): void
+    public function test_el_encargado_es_el_administrador_con_rol_protegido_y_no_puede_dejarse_sin_acceso(): void
     {
-        $this->como('encargado@ficct.edu.bo');
-        $adm = Rol::where('codigo', 'ADM')->value('id');
+        $enc = Rol::where('codigo', 'ENC')->first();
+        $this->assertTrue((bool) $enc->es_sistema);
+        $this->assertFalse(Rol::where('codigo', 'ADM')->exists());               // no hay rol Administrador aparte
+        $this->assertSame(DB::table('permisos')->count(), DB::table('rol_permiso')->where('rol_id', $enc->id)->count()); // todos los permisos
 
-        $this->postJson('/api/usuarios', [
-            'codigo' => 'HACK-1', 'nombre' => 'Intruso', 'apellido' => 'Prueba', 'email' => 'intruso@x.com',
-            'rol_id' => $adm, 'estado' => 'ACTIVO', 'password' => 'Clave12345',
-        ])->assertStatus(403);
+        $yo = $this->como('encargado@ficct.edu.bo');
+        $this->putJson("/api/roles/{$enc->id}/permisos", ['permisos' => []])->assertStatus(422); // nadie le recorta permisos
+        $this->deleteJson("/api/roles/{$enc->id}")->assertStatus(422);
+        $this->deleteJson("/api/usuarios/{$yo->id}")->assertStatus(422)->assertJson(['message' => 'No puede eliminar su propia cuenta.']);
+        $this->putJson("/api/usuarios/{$yo->id}", ['codigo' => $yo->codigo, 'nombre' => $yo->nombre, 'apellido' => $yo->apellido,
+            'email' => $yo->email, 'rol_id' => $enc->id, 'estado' => 'INACTIVO'])->assertStatus(422);
+        $this->assertSame('ACTIVO', $yo->fresh()->estado);
 
-        $admin = User::where('email', 'admin@ficct.edu.bo')->first();
-        $this->putJson("/api/usuarios/{$admin->id}", [
-            'codigo' => 'ADM-001', 'nombre' => 'Admin', 'apellido' => 'Sistema', 'email' => 'admin@ficct.edu.bo',
-            'rol_id' => $adm, 'estado' => 'INACTIVO',
-        ])->assertStatus(403);
-        $this->deleteJson("/api/usuarios/{$admin->id}")->assertStatus(403);
-        $this->assertSame('ACTIVO', $admin->fresh()->estado);
+        // Otros roles no administran cuentas
+        $this->como('director@ficct.edu.bo');
+        $this->getJson('/api/usuarios')->assertForbidden();
     }
 
     public function test_listas_con_datos_personales_requieren_permiso(): void
@@ -93,7 +94,7 @@ class SeguridadTest extends SistemaTestCase
 
     public function test_validacion_del_servidor_en_espanol(): void
     {
-        $this->como('admin@ficct.edu.bo');
+        $this->como('encargado@ficct.edu.bo');
         $r = $this->postJson('/api/usuarios', ['email' => 'docente@ficct.edu.bo', 'telefono' => '123', 'password' => 'corta']);
 
         $r->assertStatus(422)->assertJsonValidationErrors(['codigo', 'nombre', 'email', 'telefono', 'password', 'rol_id']);
@@ -103,7 +104,7 @@ class SeguridadTest extends SistemaTestCase
 
     public function test_usuario_eliminado_se_puede_restaurar(): void
     {
-        $this->como('admin@ficct.edu.bo');
+        $this->como('encargado@ficct.edu.bo');
         $u = User::where('email', 'jsuarez@ficct.edu.bo')->first();
 
         $this->deleteJson("/api/usuarios/{$u->id}")->assertOk();

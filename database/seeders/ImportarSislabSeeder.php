@@ -113,11 +113,8 @@ class ImportarSislabSeeder extends Seeder
             DB::statement("ALTER TABLE {$t} ENABLE TRIGGER USER");
         }
 
-        // Cuenta del Administrador del sistema (rol nuevo del proyecto 2; no existía en el proyecto 1)
-        DB::table('usuarios')->insert([
-            'codigo' => 'ADM-001', 'nombre' => 'Administrador', 'apellido' => 'Sistema', 'email' => 'admin@ficct.edu.bo',
-            'password' => $password, 'rol_id' => $roles['ADM'], 'estado' => 'ACTIVO', 'created_at' => now(), 'updated_at' => now(),
-        ]);
+        // El Encargado principal (ENCARGADO_PRINCIPAL) es el administrador; los demás Encargados quedan eliminados (borrado lógico)
+        \App\Support\Encargado::dejarSoloElPrincipal();
 
         $this->command?->info('Importados desde '.$o.': '.collect(self::DESTINO)->map(fn ($t) => "$t=".DB::table($t)->count())->implode(', '));
     }

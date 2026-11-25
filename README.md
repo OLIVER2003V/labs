@@ -15,7 +15,7 @@ turnos y asistencia de auxiliares, y cobros con pasarela de pagos simulada.
 ## Requisitos cubiertos
 
 1. Navegación con menú dinámico según los permisos del rol
-2. RBAC: 4 roles de negocio (Encargado, Docente, Auxiliar, Director) + Administrador; menú guardado en la BD
+2. RBAC: roles Encargado (administrador del sistema, con todos los permisos), Docente, Auxiliar, Director y Estudiante; menú guardado en la BD
 3. API RESTful en Laravel consumida por React
 4. Matriz de acceso (middleware por ruta) y bitácora (logins exitosos/fallidos, IP, recursos más accedidos) + auditoría por triggers
 5. Temas Niños / Jóvenes / Adultos, modo día/noche/automático, tamaño de letra y alto contraste
@@ -43,7 +43,7 @@ php artisan serve            # http://127.0.0.1:8000  (en otra terminal: npm run
 
 **Datos**: si la base tiene el esquema `sislab` (proyecto 1), `php artisan migrate:fresh --seed` importa sus datos
 reales (`database/seeders/ImportarSislabSeeder.php`); si no, carga datos de demostración (`ORIGEN_DATOS=demo`).
-Todos los usuarios entran con su correo y la contraseña inicial **Ficct2026**; administrador: `admin@ficct.edu.bo`.
+Todos los usuarios entran con su correo y la contraseña inicial **Ficct2026**; el administrador es el Encargado de Laboratorios (`ENCARGADO_PRINCIPAL` en `.env`).
 Con `APP_DEMO_LOGIN=true` el login muestra un botón con una cuenta real por rol.
 
 Pasarela simulada: tarjeta `4111 1111 1111 1111` (aprobada) · `4000 0000 0000 0002` (rechazada).

@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use App\Support\Encargado;
 use App\Support\Respaldo;
 use App\Support\Triggers;
 use Database\Seeders\SeguridadSeeder;
@@ -69,17 +70,18 @@ Artisan::command('sistema:verificar', function () {
 
     if (! $faltan) {
         $this->info('== Datos de seguridad');
-        $adm = DB::table('roles')->where('codigo', 'ADM')->first();
-        $ok((bool) $adm, 'Rol Administrador (ADM)', 'php artisan sistema:reparar');
+        $enc = DB::table('roles')->where('codigo', Encargado::ROL)->first();
+        $ok($enc && $enc->es_sistema, 'Rol Encargado (administrador del sistema)', 'php artisan sistema:reparar');
         $nPermisos = DB::table('permisos')->count();
         $esperados = collect(SeguridadSeeder::PERMISOS)->flatten()->count();
         $ok($nPermisos >= $esperados, "Permisos: $nPermisos de $esperados", 'php artisan sistema:reparar');
-        if ($adm) {
-            $ok(DB::table('rol_permiso')->where('rol_id', $adm->id)->count() >= $nPermisos, 'El ADM tiene todos los permisos', 'php artisan sistema:reparar');
+        if ($enc) {
+            $ok(DB::table('rol_permiso')->where('rol_id', $enc->id)->count() >= $nPermisos, 'El Encargado tiene todos los permisos', 'php artisan sistema:reparar');
         }
         $ok(DB::table('menus')->count() >= count(SeguridadSeeder::MENU), 'Menú dinámico ('.DB::table('menus')->count().' opciones)', 'php artisan sistema:reparar');
-        $admin = User::withTrashed()->where('email', 'admin@ficct.edu.bo')->first();
-        $ok($admin && ! $admin->trashed() && $admin->estado === 'ACTIVO', 'Usuario admin@ficct.edu.bo activo', 'php artisan sistema:reparar --admin');
+        $principal = User::withTrashed()->with('rol')->where('email', Encargado::email())->first();
+        $ok($principal && ! $principal->trashed() && $principal->estado === 'ACTIVO' && $principal->rol?->codigo === Encargado::ROL,
+            'Encargado principal '.Encargado::email().' activo', 'php artisan sistema:reparar --admin');
         $this->line('     Registros: usuarios='.DB::table('usuarios')->count().', reservas='.DB::table('reservas')->count()
             .', laboratorios='.DB::table('laboratorios')->count().', bitácora='.DB::table('bitacora')->count());
     }
@@ -94,7 +96,7 @@ Artisan::command('sistema:verificar', function () {
     return $fallas ? 1 : 0;
 })->purpose('Diagnostica configuración, base de datos, triggers, permisos y respaldos');
 
-Artisan::command('sistema:reparar {--admin : Restablece la contraseña del admin a Ficct2026} {--permisos : Restaura la matriz de permisos original de todos los roles}', function () {
+Artisan::command('sistema:reparar {--admin : Restablece la contraseña del Encargado principal a Ficct2026} {--permisos : Restaura la matriz de permisos original de todos los roles}', function () {
     foreach (['framework/cache/data', 'framework/sessions', 'framework/views', 'logs', 'app/respaldos'] as $d) {
         File::ensureDirectoryExists(storage_path($d));
     }
@@ -120,9 +122,9 @@ Artisan::command('sistema:reparar {--admin : Restablece la contraseña del admin
             DB::table('permisos')->updateOrInsert(['codigo' => "$recurso.$accion"], ['recurso' => $recurso, 'accion' => $accion, 'descripcion' => $d]);
         }
     }
+    $enc = Encargado::asegurarRol(); // el Encargado (administrador) siempre con todos los permisos
     $roles = DB::table('roles')->pluck('id', 'codigo');
     $permisos = DB::table('permisos')->pluck('id', 'codigo');
-    DB::table('rol_permiso')->insertOrIgnore($permisos->map(fn ($id) => ['rol_id' => $roles['ADM'], 'permiso_id' => $id])->values()->all());
     if ($this->option('permisos')) {
         foreach (SeguridadSeeder::ROL_PERMISOS as $rol => $lista) {
             DB::table('rol_permiso')->where('rol_id', $roles[$rol])->delete();
@@ -134,7 +136,7 @@ Artisan::command('sistema:reparar {--admin : Restablece la contraseña del admin
         }
         $this->line('✔ Matriz de permisos original restaurada');
     }
-    $this->line('✔ Roles y permisos base (el Administrador tiene todos)');
+    $this->line('✔ Roles y permisos base (el Encargado tiene todos)');
 
     DB::table('menus')->delete();
     foreach (SeguridadSeeder::MENU as $i => [$grupo, $titulo, $ruta, $icono, $permiso]) {
@@ -142,25 +144,27 @@ Artisan::command('sistema:reparar {--admin : Restablece la contraseña del admin
     }
     $this->line('✔ Menú dinámico regenerado');
 
-    $admin = User::withTrashed()->where('email', 'admin@ficct.edu.bo')->first();
-    if (! $admin) {
-        User::create(['codigo' => 'ADM-001', 'nombre' => 'Admin', 'apellido' => 'Sistema', 'email' => 'admin@ficct.edu.bo',
-            'password' => 'Ficct2026', 'rol_id' => $roles['ADM'], 'estado' => 'ACTIVO']);
-        $this->line('✔ Usuario admin@ficct.edu.bo creado (contraseña Ficct2026)');
+    // Encargado principal (el administrador): si lo borraron o desactivaron, vuelve; si no existe, se crea
+    $email = Encargado::email();
+    $principal = User::withTrashed()->where('email', $email)->first();
+    if (! $principal) {
+        User::create(['codigo' => 'ENC-001', 'nombre' => 'Encargado', 'apellido' => 'de Laboratorios', 'email' => $email,
+            'password' => 'Ficct2026', 'rol_id' => $enc, 'estado' => 'ACTIVO']);
+        $this->line("✔ Encargado principal $email creado (contraseña Ficct2026)");
     } else {
-        $admin->restore();
-        $cambios = ['estado' => 'ACTIVO', 'rol_id' => $roles['ADM']];
+        $principal->restore();
+        $cambios = ['estado' => 'ACTIVO', 'rol_id' => $enc];
         if ($this->option('admin')) {
             $cambios['password'] = Hash::make('Ficct2026');
         }
-        $admin->forceFill($cambios)->save();
-        $this->line('✔ Usuario admin activo con rol Administrador'.($this->option('admin') ? ' (contraseña: Ficct2026)' : ''));
+        $principal->forceFill($cambios)->save();
+        $this->line("✔ Encargado principal $email activo".($this->option('admin') ? ' (contraseña: Ficct2026)' : ''));
     }
 
     $this->info('Reparación terminada. Ejecute php artisan sistema:verificar para confirmar.');
 
     return 0;
-})->purpose('Reinstala triggers, funciones, permisos base, menú y usuario admin');
+})->purpose('Reinstala triggers, funciones, permisos base, menú y la cuenta del Encargado principal');
 
 Artisan::command('respaldo:crear {nombre? : Nombre opcional del archivo}', function () {
     [$ruta, $total] = Respaldo::crear($this->argument('nombre') ? $this->argument('nombre').'.json' : null);

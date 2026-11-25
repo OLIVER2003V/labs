@@ -31,7 +31,7 @@ class SeguridadAuditoriaTest extends SistemaTestCase
             'Por seguridad la cuenta quedó bloqueada por 5 intentos fallidos. Intente de nuevo en 13 minuto(s) o pida al administrador que la desbloquee.']);
         $this->assertDatabaseHas('notificaciones', ['usuario_id' => User::where('email', $email)->value('id'), 'titulo' => 'Su cuenta fue bloqueada por intentos fallidos']);
 
-        $this->como('admin@ficct.edu.bo');
+        $this->como('encargado@ficct.edu.bo');
         $id = User::where('email', $email)->value('id');
         $this->getJson("/api/usuarios/$id/seguridad")->assertOk()->assertJsonPath('bloqueado', true);
         $this->putJson("/api/usuarios/$id/desbloquear")->assertOk();
@@ -65,17 +65,17 @@ class SeguridadAuditoriaTest extends SistemaTestCase
         $this->withToken($otra)->getJson('/api/me')->assertUnauthorized();
     }
 
-    public function test_el_admin_cierra_las_sesiones_de_otro_pero_el_encargado_no_las_del_admin(): void
+    public function test_el_encargado_cierra_las_sesiones_de_otro_pero_un_docente_no(): void
     {
         $this->login('docente@ficct.edu.bo')->assertOk();
         $this->app['auth']->forgetGuards();
-        $this->como('admin@ficct.edu.bo');
+        $this->como('encargado@ficct.edu.bo');
         $doc = User::where('email', 'docente@ficct.edu.bo')->first();
         $this->putJson("/api/usuarios/{$doc->id}/cerrar-sesiones")->assertOk();
         $this->assertSame(0, $doc->tokens()->count());
 
-        $this->como('encargado@ficct.edu.bo');
-        $this->putJson('/api/usuarios/'.User::where('email', 'admin@ficct.edu.bo')->value('id').'/cerrar-sesiones')->assertForbidden();
+        $this->como('docente@ficct.edu.bo');
+        $this->putJson('/api/usuarios/'.User::where('email', 'encargado@ficct.edu.bo')->value('id').'/cerrar-sesiones')->assertForbidden();
     }
 
     public function test_cambio_directo_en_bd_se_avisa_y_se_puede_deshacer(): void
@@ -85,7 +85,7 @@ class SeguridadAuditoriaTest extends SistemaTestCase
         $auditoria = DB::table('auditoria')->where('tabla', 'laboratorios')->where('operacion', 'UPDATE')->latest('id')->first();
         $this->assertNull($auditoria->usuario_app_id);
 
-        $this->como('admin@ficct.edu.bo');
+        $this->como('encargado@ficct.edu.bo');
         $this->assertGreaterThanOrEqual(1, $this->getJson('/api/notificaciones')->json('avisos./auditoria'));
         $this->assertSame($auditoria->id, $this->getJson('/api/auditoria?origen=directo&tabla=laboratorios')->json('data.0.id'));
 
@@ -124,7 +124,7 @@ class SeguridadAuditoriaTest extends SistemaTestCase
         });
         $this->assertFalse(DB::table('equipos')->where('id', $equipo->id)->exists());
 
-        $this->como('admin@ficct.edu.bo');
+        $this->como('encargado@ficct.edu.bo');
         $r = $this->postJson('/api/auditoria/restaurar-eliminados', ['desde' => $antes->toDateTimeString(), 'solo_directos' => true])
             ->assertOk()->json();
         $this->assertSame(0, $r['fallidos']);
@@ -136,7 +136,7 @@ class SeguridadAuditoriaTest extends SistemaTestCase
         // Repetirlo no duplica nada
         $this->postJson('/api/auditoria/restaurar-eliminados', ['desde' => $antes->toDateTimeString()])->assertOk()->assertJsonPath('restaurados', 0);
 
-        $this->como('encargado@ficct.edu.bo');
+        $this->como('docente@ficct.edu.bo');
         $this->postJson('/api/auditoria/restaurar-eliminados', ['desde' => $antes->toDateTimeString()])->assertForbidden();
     }
 }

@@ -27,6 +27,7 @@
         <env name="DB_DATABASE" value="db_grupo08sa_test"/>
         <env name="DB_SCHEMA" value="public"/>
         <env name="ORIGEN_DATOS" value="demo"/>
+        <env name="ENCARGADO_PRINCIPAL" value="encargado@ficct.edu.bo"/>
         <env name="DB_URL" value=""/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>

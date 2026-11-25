@@ -35,13 +35,14 @@ class AppServiceProvider extends ServiceProvider
         ServeCommand::$passthroughVariables[] = 'SystemRoot';
 
         // CU10: lo que se cambia con los comandos del propio sistema (php artisan migrate, sistema:reparar, respaldo:restaurar,
-        // asistencia:faltas…) queda en la auditoría a nombre del Administrador. Así la alerta de "cambios directos en la BD"
+        // asistencia:faltas…) queda en la auditoría a nombre del Encargado principal (el administrador). Así la alerta de "cambios directos en la BD"
         // solo muestra lo hecho POR FUERA del sistema (SQL directo, pgAdmin), que es lo que puede ser sabotaje.
         if ($this->app->runningInConsole() && ! $this->app->runningUnitTests()) {
             Event::listen(ConnectionEstablished::class, function (ConnectionEstablished $e) {
                 try {
                     $admin = $e->connection->selectOne("SELECT u.id FROM usuarios u JOIN roles r ON r.id = u.rol_id
-                        WHERE r.codigo = 'ADM' AND u.deleted_at IS NULL ORDER BY u.id LIMIT 1");
+                        WHERE r.codigo = 'ENC' AND u.deleted_at IS NULL ORDER BY (LOWER(u.email) = ?) DESC, u.id LIMIT 1",
+                        [strtolower((string) config('app.encargado_principal'))]);
                     if ($admin) {
                         $e->connection->select("SELECT set_config('app.usuario_id', ?, false)", [(string) $admin->id]);
                     }

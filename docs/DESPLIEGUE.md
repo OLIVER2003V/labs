@@ -44,7 +44,7 @@ psql -h db.tecnoweb.org.bo -U grupo08sa -d db_grupo08sa -c "CREATE SCHEMA IF NOT
 misma base, **importa sus datos reales** (usuarios, laboratorios, materias, horario, reservas, equipos, incidencias,
 objetos encontrados, turnos, asistencia y bitácora) conservando los ID. `sislab` solo se lee, nunca se modifica.
 Los usuarios importados entran con su correo y la contraseña `PASSWORD_INICIAL` (por defecto `Ficct2026`);
-además se crea `admin@ficct.edu.bo` (rol Administrador, nuevo en el proyecto 2).
+el Encargado principal (`ENCARGADO_PRINCIPAL` en `.env`) es el administrador del sistema; los demás Encargados quedan eliminados (borrado lógico).
 
 > Las credenciales de la base **no se guardan en git**: solo en el `.env` del servidor.
 
@@ -61,7 +61,7 @@ bash ~/proyecto2_app/deploy/instalar.sh     # migra, carga datos demo, repara, r
 
 - `https://www.tecnoweb.org.bo/inf513/grupo08sa/proyecto2` → pantalla de login
 - `.../proyecto2/api/estado` → `{"ok":true,...}`
-- Usuarios: `admin@ficct.edu.bo`, `encargado@…`, `docente@…`, `auxiliar@…`, `director@…` — contraseña `Ficct2026`
+- Usuarios (datos de demostración): `encargado@…` (administrador), `docente@…`, `auxiliar@…`, `director@…` — contraseña `Ficct2026`
 
 ## Actualizar a una nueva versión
 

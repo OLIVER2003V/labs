@@ -88,7 +88,9 @@ return new class extends Migration
             $permisos = DB::table('permisos')->pluck('id', 'codigo');
             $roles = DB::table('roles')->pluck('id', 'codigo');
             foreach (array_column(self::PERMISOS, 0) as $codigo) {
-                DB::table('rol_permiso')->insertOrIgnore(['rol_id' => $roles['ADM'], 'permiso_id' => $permisos[$codigo]]);
+                if (isset($roles['ADM'])) {
+                    DB::table('rol_permiso')->insertOrIgnore(['rol_id' => $roles['ADM'], 'permiso_id' => $permisos[$codigo]]);
+                }
             }
             foreach (self::ROLES as $rol => $lista) {
                 foreach ($lista as $codigo) {

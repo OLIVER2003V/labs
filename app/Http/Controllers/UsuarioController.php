@@ -14,9 +14,9 @@ use Illuminate\Validation\Rules\Password;
 
 /**
  * CU1 - Gestión de usuarios.
- * Seguridad: solo quien puede administrar roles (roles.editar = Administrador) puede
- * crear, modificar o eliminar usuarios con un rol de sistema. Así el Encargado no puede
- * crearse una cuenta de Administrador ni desactivar al Administrador (escalada de privilegios).
+ * Seguridad: el Encargado de Laboratorios es el administrador (rol de sistema, con todos los permisos).
+ * Solo quien puede administrar roles (roles.editar = el Encargado) crea, modifica o elimina cuentas de Encargado,
+ * y nadie puede eliminarse, desactivarse ni quitarse el rol a sí mismo (el sistema no se queda sin administrador).
  */
 class UsuarioController extends CrudController
 {
@@ -54,8 +54,8 @@ class UsuarioController extends CrudController
             return;
         }
         $sistema = Rol::where('es_sistema', true)->pluck('id')->all();
-        abort_if($registro && in_array($registro->rol_id, $sistema), 403, 'Solo el Administrador puede modificar cuentas de Administrador.');
-        abort_if($rolNuevo && in_array($rolNuevo, $sistema), 403, 'Solo el Administrador puede asignar el rol de Administrador.');
+        abort_if($registro && in_array($registro->rol_id, $sistema), 403, 'Solo el Encargado de Laboratorios puede modificar cuentas de Encargado.');
+        abort_if($rolNuevo && in_array($rolNuevo, $sistema), 403, 'Solo el Encargado de Laboratorios puede asignar el rol de Encargado.');
     }
 
     protected function antesDeGuardar(array $datos, Request $request, ?Model $registro): array

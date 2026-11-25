@@ -19,7 +19,7 @@ Flujo: React → `lib/api.js` (Axios + token Bearer) → `routes/api.php` → mi
 - **Código**: `componentes/Layout.jsx` (`MenuLateral`), `paginas/Inicio.jsx`.
 
 ## 2. RBAC — roles y menú dinámico desde la BD
-- **Roles de negocio** (más el Administrador): Encargado, Docente, Auxiliar, Director.
+- **Roles**: el Encargado de Laboratorios es el administrador del sistema (rol de sistema, todos los permisos); roles de negocio: Docente, Auxiliar, Director y Estudiante.
 - **Menú desde la BD**: tabla `menus` (columna `permiso_codigo`). `AuthController::perfilCompleto()` devuelve solo los ítems cuyo permiso tiene el rol.
 - **Demo**: en *Roles y permisos* (admin), quitar `objetos.ver` al Auxiliar → guardar → entrar como auxiliar: desaparece del menú y la API responde 403.
 - **Código**: `database/seeders/SeguridadSeeder.php` (permisos, roles, menú), `paginas/Roles.jsx`.
@@ -74,7 +74,7 @@ Flujo: React → `lib/api.js` (Axios + token Bearer) → `routes/api.php` → mi
 - **Demo**: Auxiliar → Multas → Pagar → tarjeta `4242 4242 4242 4242` → vuelve "Pago aprobado" y la multa queda PAGADA.
 
 ## Seguridad adicional (para preguntas)
-- **Escalada de privilegios bloqueada**: solo quien tiene `roles.editar` (Administrador) puede crear, editar o borrar cuentas de Administrador (`UsuarioController::protegerSistema`).
+- **Escalada de privilegios bloqueada**: solo quien tiene `roles.editar` (el Encargado) puede crear, editar o borrar cuentas de Encargado, y nadie puede eliminarse ni desactivarse a sí mismo (`UsuarioController::protegerSistema`).
 - **Listas con datos personales** (`/api/opciones/usuarios`, etc.) exigen permiso (`GeneralController::opciones`).
 - **Cabeceras HTTP**: `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy` (`app/Http/Middleware/CabecerasSeguridad.php`).
 - **Fuerza bruta**: máximo 5 intentos de login por minuto por correo + IP (`AppServiceProvider`).

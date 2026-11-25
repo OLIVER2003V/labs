@@ -47,7 +47,7 @@ cd ~/proyecto2_app && php artisan sistema:verificar
 ```
 
 Muestra ✔ / ✘ para: `.env`, APP_KEY, frontend compilado, permisos de `storage/`, conexión a la BD,
-las 25 tablas, las 5 funciones, los 21 triggers, permisos del Administrador, menú, usuario admin y último respaldo.
+las 25 tablas, las 5 funciones, los 21 triggers, permisos del Encargado (administrador), menú, Encargado principal y último respaldo.
 **Cada ✘ trae en amarillo el comando que lo arregla.**
 
 Si la web muestra error 500: `tail -50 ~/proyecto2_app/storage/logs/laravel-$(date +%F).log`
@@ -75,7 +75,7 @@ Volver a un respaldo concreto: `bash restaurar.sh datos antes_defensa.json` (ver
 - **Borrados con dependencias**: las llaves foráneas impiden borrar, p. ej., una cuota que ya tiene transacción.
 - **Auditoría**: los triggers `tg_auditoria_*` guardan el antes/después de cada INSERT/UPDATE/DELETE,
   **incluidos los hechos por psql/pgAdmin** (aparecen como *“Directo en BD”* en rojo en la pantalla Auditoría).
-  Desde esa pantalla, un registro eliminado se puede **restaurar con un clic** (usuario Administrador).
+  Desde esa pantalla, un registro eliminado se puede **restaurar con un clic** (Encargado de Laboratorios).
 - **Usuarios**: borrado lógico (`deleted_at`); el admin se reactiva con `restaurar.sh reparar`.
 
 ## 4. Si no hay paquete en el servidor

@@ -42,7 +42,6 @@ class DatosSeeder extends Seeder
         $roles = DB::table('roles')->pluck('id', 'codigo');
         $pass = Hash::make('Ficct2026');
         $lista = [
-            ['ADM-001', 'Admin', 'Sistema', 'admin@ficct.edu.bo', '70000001', 'ADM'],
             ['ENC-001', 'Marco Antonio', 'Rivero Paz', 'encargado@ficct.edu.bo', '70000002', 'ENC'],
             ['DIR-001', 'Silvia', 'Montaño Rojas', 'director@ficct.edu.bo', '70000003', 'DIR'],
             ['DOC-001', 'Carla', 'Vaca Justiniano', 'docente@ficct.edu.bo', '71000001', 'DOC'],

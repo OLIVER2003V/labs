@@ -84,8 +84,17 @@ class ReservasConflictosTest extends SistemaTestCase
         $this->postJson('/api/reservas', $this->solicitud(['laboratorio_id' => $alt[0]['id']]))->assertCreated();
     }
 
+    /** Una clase de los martes afecta TODOS los martes del semestre: se descartan otras reservas de los datos de prueba en ese horario */
+    private function sinOtrasReservasLosMartes(): void
+    {
+        Reserva::where('laboratorio_id', $this->lab->id)->whereIn('estado', ['PENDIENTE', 'APROBADA'])
+            ->whereRaw('EXTRACT(ISODOW FROM fecha) = 2')->where('hora_inicio', '<', '21:45:00')->where('hora_fin', '>', '20:00:00')
+            ->update(['estado' => 'CANCELADA']);
+    }
+
     public function test_una_clase_nueva_tiene_prioridad_y_cancela_las_reservas_que_pisa(): void
     {
+        $this->sinOtrasReservasLosMartes();
         $this->como('docente@ficct.edu.bo');
         $id = $this->postJson('/api/reservas', $this->solicitud())->assertCreated()->json('data.id');
         $antes = $this->notificaciones('docente@ficct.edu.bo');
@@ -107,6 +116,7 @@ class ReservasConflictosTest extends SistemaTestCase
 
     public function test_importar_horario_avisa_y_cancela_las_reservas_que_pisa(): void
     {
+        $this->sinOtrasReservasLosMartes();
         $this->como('docente@ficct.edu.bo');
         $id = $this->postJson('/api/reservas', $this->solicitud())->assertCreated()->json('data.id');
 

@@ -68,6 +68,9 @@ return [
     // Muestra en el login botones con una cuenta real por rol (útil en la defensa; expone esos correos)
     'demo_login' => (bool) env('APP_DEMO_LOGIN', false),
 
+    // El Encargado de Laboratorios es el administrador del sistema; este es su correo (lo vigila y repara el kit de recuperación)
+    'encargado_principal' => env('ENCARGADO_PRINCIPAL', 'encargado@ficct.edu.bo'),
+
     'timezone' => env('APP_TIMEZONE', 'America/La_Paz'),
 
     /*

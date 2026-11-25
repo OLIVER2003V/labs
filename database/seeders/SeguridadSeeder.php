@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Support\Encargado;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
@@ -37,20 +38,16 @@ class SeguridadSeeder extends Seeder
     ];
 
     const ROLES = [
-        ['ADM', 'Administrador del Sistema', 'Administra usuarios, roles, permisos y la seguridad del sistema', true],
-        ['ENC', 'Encargado de Laboratorios', 'Gestiona laboratorios, horarios, reservas, inventario, auxiliares y cobros', false],
+        // El Encargado es el administrador del sistema: rol de sistema (protegido) con TODOS los permisos
+        ['ENC', 'Encargado de Laboratorios', Encargado::DESCRIPCION, true],
         ['DOC', 'Docente', 'Solicita reservas, consulta disponibilidad y reporta incidencias', false],
         ['AUX', 'Auxiliar', 'Atiende los laboratorios en su turno, registra asistencia, incidencias y objetos', false],
         ['DIR', 'Director de Carrera', 'Solicita reservas para eventos y consulta estadísticas', false],
         ['EST', 'Estudiante FICCT', 'Estudiante de la FICCT (ej: auxiliar de cátedra) que solicita reservas de laboratorio', false],
     ];
 
-    /** Permisos por rol de negocio (el ADM recibe todos) */
+    /** Permisos por rol de negocio (el Encargado recibe TODOS: ver Encargado::asegurarRol) */
     const ROL_PERMISOS = [
-        'ENC' => ['dashboard.ver', 'reportes.ver', 'usuarios.ver', 'usuarios.crear', 'usuarios.editar', 'bitacora.ver',
-            'laboratorios.*', 'semestres.*', 'horarios.*', 'disponibilidad.ver', 'reservas.*', 'equipos.*',
-            'incidencias.*', 'objetos.*', 'turnos.*', 'asistencia.ver', 'asistencia.gestionar', 'permutas.ver', 'permutas.aprobar', 'mensajes.usar', 'multas.ver', 'multas.gestionar',
-            'pagos.*', 'planes.gestionar', 'conceptos.*'],
         'DOC' => ['laboratorios.ver', 'horarios.ver', 'disponibilidad.ver', 'reservas.ver', 'reservas.crear',
             'reservas.cancelar', 'equipos.ver', 'incidencias.ver', 'incidencias.crear', 'pagos.ver', 'pagos.pagar', 'multas.ver'],
         'AUX' => ['laboratorios.ver', 'horarios.ver', 'disponibilidad.ver', 'reservas.ver', 'reservas.crear', 'reservas.cancelar',
@@ -107,9 +104,7 @@ class SeguridadSeeder extends Seeder
         $permisos = DB::table('permisos')->pluck('id', 'codigo');
         $roles = DB::table('roles')->pluck('id', 'codigo');
 
-        foreach ($permisos as $id) {
-            DB::table('rol_permiso')->insert(['rol_id' => $roles['ADM'], 'permiso_id' => $id]);
-        }
+        Encargado::asegurarRol();
         foreach (self::ROL_PERMISOS as $rol => $lista) {
             foreach ($permisos as $codigo => $id) {
                 $recurso = explode('.', $codigo)[0];
