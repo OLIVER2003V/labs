@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ObjetoEncontrado;
+use App\Support\ImagenObjeto;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -31,6 +32,10 @@ class ObjetoEncontradoController extends CrudController
         if (! $registro) {
             $datos['registrado_por'] = $request->user()->id;
         }
+        // Sin foto propia: imagen de referencia según la descripción (se actualiza si cambia la descripción)
+        if (! ImagenObjeto::esSubida($registro?->imagen)) {
+            $datos['imagen'] = ImagenObjeto::sugerir($datos['descripcion']);
+        }
 
         return $datos;
     }
@@ -38,6 +43,32 @@ class ObjetoEncontradoController extends CrudController
     protected function antesDeEliminar(Model $registro, Request $request): void
     {
         abort_if($registro->estado === 'ENTREGADO', 422, 'No se puede eliminar un objeto ya entregado (queda como constancia).');
+        ImagenObjeto::borrar($registro->imagen);
+    }
+
+    /** POST /api/objetos/{id}/imagen  (multipart: imagen) → foto del objeto real, tomada por el auxiliar */
+    public function subirImagen(Request $request, int $id): JsonResponse
+    {
+        $request->validate(['imagen' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096']], [
+            'imagen.required' => 'Elija una foto.', 'imagen.image' => 'El archivo debe ser una imagen.',
+            'imagen.mimes' => 'La foto debe ser JPG, PNG o WEBP.', 'imagen.max' => 'La foto no puede pasar de 4 MB.',
+        ]);
+        $objeto = ObjetoEncontrado::findOrFail($id);
+        $anterior = $objeto->imagen;
+        $objeto->update(['imagen' => ImagenObjeto::guardar($request->file('imagen'))]);
+        ImagenObjeto::borrar($anterior);
+
+        return response()->json(['message' => 'Foto guardada.', 'data' => $objeto->fresh($this->con)]);
+    }
+
+    /** DELETE /api/objetos/{id}/imagen → quita la foto propia y vuelve a la imagen de referencia */
+    public function quitarImagen(int $id): JsonResponse
+    {
+        $objeto = ObjetoEncontrado::findOrFail($id);
+        ImagenObjeto::borrar($objeto->imagen);
+        $objeto->update(['imagen' => ImagenObjeto::sugerir($objeto->descripcion)]);
+
+        return response()->json(['message' => 'Se quitó la foto. Se muestra la imagen de referencia.', 'data' => $objeto->fresh($this->con)]);
     }
 
     public function entregar(Request $request, int $id): JsonResponse

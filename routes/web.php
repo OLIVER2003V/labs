@@ -2,6 +2,16 @@
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
+
+// CU6 - Fotos subidas de objetos encontrados (storage/app/private/objetos). Nombre aleatorio de 32 caracteres:
+// se pueden mostrar en <img> sin token, pero no se pueden adivinar.
+Route::get('/media/objetos/{archivo}', function (string $archivo) {
+    $ruta = Storage::disk('local')->path(App\Support\ImagenObjeto::CARPETA_SUBIDAS.'/'.$archivo);
+    abort_unless(is_file($ruta), 404);
+
+    return response()->file($ruta, ['Cache-Control' => 'public, max-age=604800']);
+})->where('archivo', '[A-Za-z0-9]{32}\.(jpg|png|webp)');
 
 // El frontend es una SPA en React: cualquier ruta que no sea /api devuelve la misma vista
 // y React Router decide qué pantalla mostrar.

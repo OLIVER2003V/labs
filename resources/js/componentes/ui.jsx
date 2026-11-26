@@ -160,6 +160,22 @@ export function Campo({ campo, valor, onChange, error, valores = {} }) {
                 })}
             </select>
         );
+    } else if (campo.tipo === 'imagen') {
+        // Foto: en el celular abre la cámara (capture). Vista previa de la elegida o de la actual (campo.actual(valores))
+        const previa = valor instanceof File ? URL.createObjectURL(valor) : campo.actual?.(valores);
+        control = (
+            <div className="flex flex-wrap items-center gap-3">
+                {previa && <img src={previa} alt="Vista previa" className="size-20 rounded-tema border border-borde object-cover" />}
+                <input
+                    {...comunes}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    capture="environment"
+                    className="block min-w-0 flex-1 text-sm file:mr-3 file:rounded-tema file:border file:border-borde file:bg-superficie-2 file:px-3 file:py-1.5 file:text-sm"
+                    onChange={(e) => onChange(e.target.files?.[0] ?? '')}
+                />
+            </div>
+        );
     } else if (campo.tipo === 'textarea') {
         control = <textarea {...comunes} rows={3} className={clase} value={valor ?? ''} maxLength={campo.max} onChange={(e) => onChange(e.target.value)} />;
     } else if (campo.tipo === 'casillas') {

@@ -1,6 +1,6 @@
 import { Fragment, isValidElement, useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { BellRing, FileSpreadsheet, Loader2, Pencil, Plus, Printer, Search, Trash2 } from 'lucide-react';
+import { BellRing, FileSpreadsheet, LayoutGrid, List, Loader2, Pencil, Plus, Printer, Search, Trash2 } from 'lucide-react';
 import api, { erroresCampos, mensajeError } from '../lib/api';
 import { excelDeTabla, imprimir } from '../lib/exportar';
 import { validar } from '../lib/validar';
@@ -28,11 +28,31 @@ function aTexto(nodo) {
  * aviso    = { texto, filtro }  → cartel arriba de la tabla ("Tiene 1 permuta por aprobar") con el botón "Ver solo esas",
  *                                 que aplica ese filtro (ej: { accion: 1 }). Explica el número rojo del menú.
  * resaltar = (fila) => texto | null → si devuelve texto, la fila se resalta con esa etiqueta (ej: "Requiere su acción").
+ * tarjeta  = (fila) => JSX       → además de la tabla, vista en TARJETAS (ej: objetos con foto). Botón Lista / Tarjetas.
+ * alGuardar = async (registro, valores) → después de guardar (ej: subir la foto elegida en el formulario).
+ * columnas[].exportar = false    → la columna no va al Excel/PDF (ej: la miniatura de la foto).
  */
+const leerVista = (clave) => {
+    try {
+        return localStorage.getItem(clave);
+    } catch {
+        return null;
+    }
+};
 export default function CrudPage({
-    titulo, descripcion, endpoint, permisos = {}, columnas, campos = [], filtros = [], inicial = {},
-    aFormulario, acciones, botonesExtra, singular = 'registro', femenino = false, recargarClave, aviso, resaltar,
+    titulo, descripcion, endpoint, permisos = {}, columnas: columnasTodas, campos = [], filtros = [], inicial = {},
+    aFormulario, acciones, botonesExtra, singular = 'registro', femenino = false, recargarClave, aviso, resaltar, tarjeta, alGuardar,
 }) {
+    const claveVista = `vista:${endpoint}`;
+    const [vista, setVista] = useState(() => leerVista(claveVista) ?? 'tarjetas');
+    const cambiarVista = (v) => {
+        setVista(v);
+        try {
+            localStorage.setItem(claveVista, v);
+        } catch {
+            /* sin almacenamiento: solo dura esta visita */
+        }
+    };
     const { puede } = useAuth();
     const notificar = useToast();
     const [params, setParams] = useSearchParams();
@@ -57,6 +77,7 @@ export default function CrudPage({
      */
     const exportar = async (formato) => {
         setExportando(formato);
+        const columnas = columnasTodas.filter((c) => c.exportar !== false);
         try {
             let filas = [];
             for (let p = 1, ultima = 1; p <= ultima && p <= 50; p++) {
@@ -140,10 +161,19 @@ export default function CrudPage({
         setEnviando(true);
         setAlternativas(null);
         try {
-            const datosEnvio = Object.fromEntries(Object.entries(valores).map(([k, v]) => [k, v === '' ? null : v]));
+            // Los archivos (ej: una foto) no van en el JSON: los sube alGuardar
+            const datosEnvio = Object.fromEntries(Object.entries(valores).filter(([, v]) => !(v instanceof File)).map(([k, v]) => [k, v === '' ? null : v]));
             if (confirmar) datosEnvio.confirmar = true;
             const { data } = form.id ? await api.put(`/${endpoint}/${form.id}`, datosEnvio) : await api.post(`/${endpoint}`, datosEnvio);
-            notificar(data.message);
+            let mensaje = data.message;
+            if (alGuardar) {
+                try {
+                    mensaje = (await alGuardar(data.data, valores)) ?? mensaje;
+                } catch (e) {
+                    notificar(`Se guardó, pero: ${mensajeError(e)}`, 'alerta');
+                }
+            }
+            notificar(mensaje);
             setForm(null);
             cargar();
         } catch (err) {
@@ -180,6 +210,8 @@ export default function CrudPage({
     const puedeEliminar = permisos.eliminar && puede(permisos.eliminar);
     const hayAcciones = puedeEditar || puedeEliminar || acciones;
     const celular = useMedia('(max-width: 767px)'); // en celular cada fila se muestra como tarjeta (la tabla no entra)
+    const columnas = columnasTodas;
+    const enTarjetas = !!tarjeta && (vista === 'tarjetas' || celular);
     const etiquetaMarca = (marca) => marca && <span className="mb-1 block w-max rounded-full bg-acento px-2 py-0.5 text-[11px] font-bold text-white">{marca}</span>;
     const botonesDe = (fila) => (
         <>
@@ -253,6 +285,21 @@ export default function CrudPage({
                             }}
                         />
                     </div>
+                    {tarjeta && !celular && (
+                        <div className="flex rounded-tema border border-borde" role="group" aria-label="Forma de ver">
+                            {[['tarjetas', LayoutGrid, 'Tarjetas'], ['lista', List, 'Lista']].map(([v, Icono, nombre]) => (
+                                <button
+                                    key={v}
+                                    type="button"
+                                    className={`flex items-center gap-1.5 px-3 text-sm ${vista === v ? 'bg-primario-tenue font-semibold text-primario' : 'text-suave hover:bg-superficie-2'}`}
+                                    aria-pressed={vista === v}
+                                    onClick={() => cambiarVista(v)}
+                                >
+                                    <Icono className="size-4" aria-hidden /> {nombre}
+                                </button>
+                            ))}
+                        </div>
+                    )}
                     {filtros.map((f) => (
                         <select
                             key={f.name}
@@ -277,6 +324,19 @@ export default function CrudPage({
                     <Cargando />
                 ) : !datos?.data?.length ? (
                     <Vacio texto={q ? `No se encontraron resultados para "${q}".` : undefined} />
+                ) : enTarjetas ? (
+                    <ul className={`grid gap-3 p-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 ${cargando ? 'opacity-60' : ''}`}>
+                        {datos.data.map((fila) => {
+                            const marca = resaltar?.(fila);
+                            return (
+                                <li key={fila.id} className={`flex flex-col overflow-hidden rounded-tema border bg-superficie ${marca ? 'border-acento' : 'border-borde'}`}>
+                                    {marca && <div className="px-3 pt-3">{etiquetaMarca(marca)}</div>}
+                                    <div className="flex-1">{tarjeta(fila)}</div>
+                                    {hayAcciones && <div className="flex flex-wrap justify-end gap-1 border-t border-borde p-2 empty:hidden">{botonesDe(fila)}</div>}
+                                </li>
+                            );
+                        })}
+                    </ul>
                 ) : celular ? (
                     <ul className={`divide-y divide-borde ${cargando ? 'opacity-60' : ''}`}>
                         {datos.data.map((fila) => {

@@ -258,7 +258,7 @@ class DatosSeeder extends Seeder
             $fecha = Carbon::today()->subDays(mt_rand(0, 45));
             $entregado = $i < 4;
             DB::table('objetos_encontrados')->insert([
-                'laboratorio_id' => $labs[$i % count($labs)], 'descripcion' => $desc, 'fecha_hallazgo' => $fecha->toDateString(),
+                'laboratorio_id' => $labs[$i % count($labs)], 'descripcion' => $desc, 'imagen' => \App\Support\ImagenObjeto::sugerir($desc), 'fecha_hallazgo' => $fecha->toDateString(),
                 'registrado_por' => $auxes[$i % 3], 'estado' => $entregado ? 'ENTREGADO' : 'EN_CUSTODIA',
                 'entregado_a' => $entregado ? $receptores[$i][0] : null, 'ci_receptor' => $entregado ? $receptores[$i][1] : null,
                 'fecha_entrega' => $entregado ? $fecha->copy()->addDays(2)->setTime(10, 30) : null,

@@ -86,7 +86,7 @@ class ImportarSislabSeeder extends Seeder
         ]));
 
         $this->lote('objetos_encontrados', $s('objeto_encontrado')->orderBy('id')->get()->map(fn ($x) => [
-            'id' => $x->id, 'laboratorio_id' => $x->laboratorio_id, 'descripcion' => $x->descripcion, 'fecha_hallazgo' => $x->fecha_hallazgo,
+            'id' => $x->id, 'laboratorio_id' => $x->laboratorio_id, 'descripcion' => $x->descripcion, 'imagen' => \App\Support\ImagenObjeto::sugerir((string) $x->descripcion), 'fecha_hallazgo' => $x->fecha_hallazgo,
             'registrado_por' => $x->registrado_por ?? $x->encontrado_por, 'estado' => $x->estado, 'entregado_a' => $vacio($x->entregado_a),
             'ci_receptor' => $vacio($x->ci_receptor), 'fecha_entrega' => $x->fecha_entrega,
             'created_at' => $x->fecha_hallazgo, 'updated_at' => $x->fecha_entrega ?? $x->fecha_hallazgo,

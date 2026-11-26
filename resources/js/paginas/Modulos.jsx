@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Check, FileSpreadsheet, HandHelping, Lock, LogOut, PlayCircle, RotateCcw, ShieldAlert, Unlock, X } from 'lucide-react';
+import { Check, FileSpreadsheet, HandHelping, ImageOff, Lock, LogOut, PackageSearch, PlayCircle, RotateCcw, ShieldAlert, Unlock, X } from 'lucide-react';
 import ImportarHorario from './ImportarHorario';
 import CrudPage from '../componentes/CrudPage';
 import { Badge, Confirmar, Formulario, Modal, useToast } from '../componentes/ui';
@@ -344,6 +344,97 @@ function BotonEntregar({ fila, recargar }) {
     );
 }
 
+/**
+ * Foto del objeto: la que subió el auxiliar o, si no hay, una imagen de referencia según el tipo de objeto.
+ * grande = para la tarjeta; si no, miniatura para la lista. Al tocarla se ve en grande.
+ */
+function FotoObjeto({ fila, grande = false }) {
+    const [ver, setVer] = useState(false);
+    const [rota, setRota] = useState(false);
+    const caja = grande ? 'aspect-[4/3] w-full' : 'size-14 rounded-tema border border-borde';
+    if (!fila.imagen_url || rota) {
+        return (
+            <div className={`${caja} grid shrink-0 place-items-center bg-superficie-2 text-suave`} title="Sin imagen">
+                <PackageSearch className={grande ? 'size-12' : 'size-6'} aria-hidden />
+            </div>
+        );
+    }
+    // Las de referencia son fotos de producto: se muestran enteras sobre blanco. Las propias llenan el recuadro.
+    const ajuste = fila.imagen_propia ? 'object-cover' : 'object-contain bg-white p-1';
+    return (
+        <>
+            <button type="button" className={`${caja} relative shrink-0 overflow-hidden`} onClick={() => setVer(true)} aria-label={`Ver la foto de ${fila.descripcion}`}>
+                <img src={fila.imagen_url} alt="" loading="lazy" className={`size-full ${ajuste}`} onError={() => setRota(true)} />
+                {grande && !fila.imagen_propia && (
+                    <span className="absolute bottom-1.5 left-1.5 rounded bg-black/65 px-1.5 py-0.5 text-[10px] font-semibold text-white">Imagen de referencia</span>
+                )}
+            </button>
+            <Modal abierto={ver} titulo={fila.descripcion} onCerrar={() => setVer(false)} ancho="max-w-2xl">
+                <img src={fila.imagen_url} alt={fila.descripcion} className={`max-h-[70vh] w-full rounded-tema ${fila.imagen_propia ? 'object-contain' : 'object-contain bg-white p-2'}`} />
+                <p className="mt-2 text-xs text-suave">
+                    {fila.imagen_propia ? 'Foto del objeto tomada por el auxiliar.' : 'Imagen de referencia según el tipo de objeto (no es la foto del objeto real).'}
+                </p>
+            </Modal>
+        </>
+    );
+}
+
+/** Quitar la foto subida (vuelve a la imagen de referencia) */
+function BotonQuitarFoto({ fila, recargar }) {
+    const { puede } = useAuth();
+    const notificar = useToast();
+    const [confirmar, setConfirmar] = useState(false);
+    if (!fila.imagen_propia || fila.estado !== 'EN_CUSTODIA' || !puede('objetos.crear')) return null;
+    return (
+        <>
+            <button className="btn btn-fantasma btn-sm" onClick={() => setConfirmar(true)} title="Quitar la foto">
+                <ImageOff className="size-4" aria-hidden /> <span className="sr-only">Quitar foto</span>
+            </button>
+            <Confirmar
+                abierto={confirmar}
+                titulo="Quitar la foto"
+                mensaje="Se borrará la foto subida y se mostrará la imagen de referencia del tipo de objeto."
+                textoBoton="Quitar foto"
+                onConfirmar={async () => {
+                    try {
+                        notificar((await api.delete(`/objetos/${fila.id}/imagen`)).data.message);
+                        recargar();
+                    } catch (e) {
+                        notificar(mensajeError(e), 'error');
+                    }
+                    setConfirmar(false);
+                }}
+                onCerrar={() => setConfirmar(false)}
+            />
+        </>
+    );
+}
+
+/** Tarjeta de un objeto: foto grande y sus datos */
+const TarjetaObjeto = (f) => (
+    <>
+        <FotoObjeto fila={f} grande />
+        <div className="space-y-1 p-3 text-sm">
+            <p className="font-semibold leading-snug">{f.descripcion}</p>
+            <p className="text-xs text-suave">{f.laboratorio?.codigo} · hallado el {fecha(f.fecha_hallazgo)}</p>
+            <p className="text-xs text-suave">Registró: {f.registrador?.nombre_completo}</p>
+            <div className="pt-1">
+                <Badge valor={f.estado} />
+                {f.entregado_a && <span className="mt-1 block text-xs text-suave">A {f.entregado_a} (CI {f.ci_receptor}) · {fechaHora(f.fecha_entrega)}</span>}
+            </div>
+        </div>
+    </>
+);
+
+/** Sube la foto elegida en el formulario (después de guardar el objeto) */
+const subirFoto = async (registro, valores) => {
+    if (!(valores.foto instanceof File)) return null;
+    const datos = new FormData();
+    datos.append('imagen', valores.foto);
+    await api.post(`/objetos/${registro.id}/imagen`, datos, { headers: { 'Content-Type': 'multipart/form-data' } });
+    return 'Objeto guardado con su foto.';
+};
+
 export const Objetos = () => (
     <CrudPage
         titulo="Objetos encontrados"
@@ -352,18 +443,26 @@ export const Objetos = () => (
         singular="objeto"
         permisos={{ crear: 'objetos.crear', editar: 'objetos.crear', eliminar: 'objetos.crear' }}
         filtros={[{ name: 'estado', label: 'Estado', opciones: ['EN_CUSTODIA', 'ENTREGADO'] }]}
+        tarjeta={TarjetaObjeto}
+        alGuardar={subirFoto}
         columnas={[
+            { key: 'foto', label: 'Foto', exportar: false, render: (f) => <FotoObjeto fila={f} /> },
             { key: 'fecha_hallazgo', label: 'Hallado', render: (f) => fecha(f.fecha_hallazgo) },
             { key: 'descripcion', label: 'Descripción', render: (f) => <strong>{f.descripcion}</strong> },
             { key: 'laboratorio', label: 'Laboratorio', render: (f) => f.laboratorio?.codigo },
             { key: 'registrador', label: 'Registró (auxiliar)', render: (f) => f.registrador?.nombre_completo },
             { key: 'estado', label: 'Estado', render: (f) => <><Badge valor={f.estado} />{f.entregado_a && <span className="mt-1 block text-xs text-suave">{f.entregado_a} (CI {f.ci_receptor}) · {fechaHora(f.fecha_entrega)}</span>}</> },
         ]}
-        acciones={(fila, recargar) => <BotonEntregar fila={fila} recargar={recargar} />}
+        acciones={(fila, recargar) => <><BotonQuitarFoto fila={fila} recargar={recargar} /><BotonEntregar fila={fila} recargar={recargar} /></>}
+        aFormulario={(f) => ({ descripcion: f.descripcion, laboratorio_id: f.laboratorio_id, fecha_hallazgo: f.fecha_hallazgo, foto: '', imagen_url: f.imagen_url })}
         campos={[
-            { name: 'descripcion', label: 'Descripción del objeto', requerido: true, min: 3, max: 200, ancho: 'completo' },
+            { name: 'descripcion', label: 'Descripción del objeto', requerido: true, min: 3, max: 200, ancho: 'completo', placeholder: 'Ej: Mouse inalámbrico negro Logitech' },
             { name: 'laboratorio_id', label: 'Laboratorio', tipo: 'select', opciones: 'laboratorios', requerido: true },
             { name: 'fecha_hallazgo', label: 'Fecha de hallazgo', tipo: 'date', requerido: true, noFuturo: true },
+            {
+                name: 'foto', label: 'Foto del objeto (opcional)', tipo: 'imagen', ancho: 'completo', actual: (v) => v.imagen_url,
+                ayuda: 'Tome o elija una foto (JPG, PNG o WEBP, hasta 4 MB). Si no sube una, se muestra una imagen de referencia según el tipo de objeto.',
+            },
         ]}
     />
 );

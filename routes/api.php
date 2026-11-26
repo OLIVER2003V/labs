@@ -135,6 +135,8 @@ Route::middleware(['auth:sanctum', 'bitacora'])->group(function () {
     Route::post('incidencias', [IncidenciaController::class, 'store'])->middleware('permiso:incidencias.crear');
     Route::put('incidencias/{id}', [IncidenciaController::class, 'update'])->middleware('permiso:incidencias.gestionar');
     crud('objetos', ObjetoEncontradoController::class, 'objetos', ['editar' => 'objetos.crear', 'eliminar' => 'objetos.crear']);
+    Route::post('objetos/{id}/imagen', [ObjetoEncontradoController::class, 'subirImagen'])->whereNumber('id')->middleware('permiso:objetos.crear');
+    Route::delete('objetos/{id}/imagen', [ObjetoEncontradoController::class, 'quitarImagen'])->whereNumber('id')->middleware('permiso:objetos.crear');
     Route::put('objetos/{id}/entregar', [ObjetoEncontradoController::class, 'entregar'])->middleware('permiso:objetos.entregar');
 
     // Auxiliares: turnos y asistencia

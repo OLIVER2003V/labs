@@ -21,6 +21,11 @@ export function validar(valores, campos) {
             if (requerido) errores[c.name] = `El campo ${nombre} es obligatorio.`;
             continue;
         }
+        if (c.tipo === 'imagen') { // foto elegida: tipo y tamaño (igual que el servidor)
+            if (v instanceof File && !['image/jpeg', 'image/png', 'image/webp'].includes(v.type)) errores[c.name] = 'La foto debe ser JPG, PNG o WEBP.';
+            else if (v instanceof File && v.size > 4 * 1024 * 1024) errores[c.name] = 'La foto no puede pasar de 4 MB.';
+            continue;
+        }
         const texto = String(v).trim();
 
         if (c.tipo === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(texto)) {
