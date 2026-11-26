@@ -461,7 +461,7 @@ export const Objetos = () => (
             { name: 'fecha_hallazgo', label: 'Fecha de hallazgo', tipo: 'date', requerido: true, noFuturo: true },
             {
                 name: 'foto', label: 'Foto del objeto (opcional)', tipo: 'imagen', ancho: 'completo', actual: (v) => v.imagen_url,
-                ayuda: 'Tome o elija una foto (JPG, PNG o WEBP, hasta 4 MB). Si no sube una, se muestra una imagen de referencia según el tipo de objeto.',
+                ayuda: 'Tome o elija una foto (JPG, PNG o WEBP, hasta 4 MB).',
             },
         ]}
     />
