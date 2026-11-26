@@ -7,6 +7,7 @@ use App\Models\Horario;
 use App\Models\Laboratorio;
 use App\Models\Reserva;
 use App\Models\Semestre;
+use App\Support\Prioridad;
 use Carbon\Carbon;
 
 /**
@@ -16,12 +17,16 @@ use Carbon\Carbon;
  *   - tiene una clase del horario base ese día de la semana (semestre activo),
  *   - o tiene una reserva APROBADA que se superpone.
  * Dos franjas se superponen cuando: inicioA < finB  y  inicioB < finA.
+ *
+ * CU4 - Jerarquía (App\Support\Prioridad): si se indica el tipo de la reserva nueva, cada conflicto dice su nivel y si
+ * se puede DESPLAZAR (clases y reservas de menor prioridad sí; feriados y bloqueos nunca).
  */
 class Disponibilidad
 {
-    /** @return array<int, array{tipo:string, detalle:string, hora_inicio?:string, hora_fin?:string}> */
-    public static function conflictos(int $laboratorioId, string $fecha, string $horaInicio, string $horaFin, ?int $ignorarReservaId = null): array
+    /** @return array<int, array{tipo:string, detalle:string, nivel:int, desplazable:bool, hora_inicio?:string, hora_fin?:string}> */
+    public static function conflictos(int $laboratorioId, string $fecha, string $horaInicio, string $horaFin, ?int $ignorarReservaId = null, ?string $tipo = null): array
     {
+        $puede = fn (int $nivel) => $tipo !== null && Prioridad::desplaza($tipo, $nivel);
         $conflictos = [];
         // Normalizamos a HH:MM:SS para comparar como texto igual que PostgreSQL ("10:00" → "10:00:00")
         $horaInicio = self::hms($horaInicio);
@@ -32,7 +37,7 @@ class Disponibilidad
             ->get();
         foreach ($bloqueos as $b) {
             if ($b->seCruzaCon($horaInicio, $horaFin)) {
-                $conflictos[] = ['tipo' => 'BLOQUEO', 'detalle' => "Fecha bloqueada ({$b->tipo}, {$b->horario()}): {$b->motivo}"]
+                $conflictos[] = ['tipo' => 'BLOQUEO', 'detalle' => "Fecha bloqueada ({$b->tipo}, {$b->horario()}): {$b->motivo}", 'nivel' => 0, 'desplazable' => false]
                     + ($b->esDiaCompleto() ? [] : ['hora_inicio' => substr($b->hora_inicio, 0, 5), 'hora_fin' => substr($b->hora_fin, 0, 5)]);
             }
         }
@@ -44,6 +49,8 @@ class Disponibilidad
                     'detalle' => "Clase {$h->materia->sigla} grupo {$h->grupo} ({$h->docente->nombre_completo})",
                     'hora_inicio' => substr($h->hora_inicio, 0, 5),
                     'hora_fin' => substr($h->hora_fin, 0, 5),
+                    'nivel' => Prioridad::CLASE, 'desplazable' => $puede(Prioridad::CLASE),
+                    'horario_id' => $h->id, 'docente_id' => $h->docente_id,
                 ];
             }
         }
@@ -57,9 +64,11 @@ class Disponibilidad
         foreach ($reservas as $r) {
             $conflictos[] = [
                 'tipo' => 'RESERVA',
-                'detalle' => "Reserva #{$r->id} ({$r->tipo}) de {$r->solicitante->nombre_completo}",
+                'detalle' => 'Reserva #'.$r->id.' ('.Prioridad::nombre($r->tipo).") de {$r->solicitante->nombre_completo}",
                 'hora_inicio' => substr($r->hora_inicio, 0, 5),
                 'hora_fin' => substr($r->hora_fin, 0, 5),
+                'nivel' => Prioridad::nivel($r->tipo), 'desplazable' => $puede(Prioridad::nivel($r->tipo)),
+                'reserva_id' => $r->id,
             ];
         }
 
@@ -103,7 +112,8 @@ class Disponibilidad
     /**
      * Reservas futuras (pendientes o aprobadas) que caen sobre una clase semanal:
      * mismo laboratorio, mismo día de la semana, horas superpuestas y dentro de las fechas del semestre.
-     * Regla FICCT: la clase del horario base tiene prioridad, esas reservas se cancelan.
+     * Jerarquía: la clase solo desplaza lo que está DEBAJO de ella (prácticas de auxiliares de cátedra);
+     * un examen, una conferencia o un PSA ese día se mantiene y la clase de ese día se suspende.
      */
     public static function reservasSobreClase(Semestre $semestre, int $laboratorioId, int $dia, string $horaInicio, string $horaFin): \Illuminate\Support\Collection
     {
@@ -112,6 +122,7 @@ class Disponibilidad
         return Reserva::with(['laboratorio', 'solicitante'])
             ->where('laboratorio_id', $laboratorioId)
             ->whereIn('estado', ['PENDIENTE', 'APROBADA'])
+            ->whereNotIn('tipo', Prioridad::sobreClases())
             ->whereDate('fecha', '>=', $desde)->whereDate('fecha', '<=', $semestre->fecha_fin->format('Y-m-d'))
             ->whereRaw('EXTRACT(ISODOW FROM fecha) = ?', [$dia])
             ->where('hora_inicio', '<', self::hms($horaFin))->where('hora_fin', '>', self::hms($horaInicio))
@@ -135,19 +146,25 @@ class Disponibilidad
                 ];
             }
 
-            foreach (self::clasesDelDia($fecha, $lab->id) as $h) {
-                $bloques[] = [
-                    'tipo' => 'CLASE', 'inicio' => substr($h->hora_inicio, 0, 5), 'fin' => substr($h->hora_fin, 0, 5),
-                    'titulo' => "{$h->materia->sigla}-{$h->grupo}", 'detalle' => $h->docente->nombre_completo,
-                ];
-            }
             $reservas = Reserva::with('solicitante')->where('laboratorio_id', $lab->id)->whereDate('fecha', $fecha)
                 ->whereIn('estado', ['APROBADA', 'PENDIENTE'])->get();
+            foreach (self::clasesDelDia($fecha, $lab->id) as $h) {
+                // Una reserva aprobada de mayor prioridad (ej: examen) ocupa ese horario: la clase de ese día se suspende
+                $encima = $reservas->first(fn ($r) => $r->estado === 'APROBADA' && Prioridad::nivel($r->tipo) < Prioridad::CLASE
+                    && $r->hora_inicio < $h->hora_fin && $h->hora_inicio < $r->hora_fin);
+                $bloques[] = [
+                    'tipo' => 'CLASE', 'inicio' => substr($h->hora_inicio, 0, 5), 'fin' => substr($h->hora_fin, 0, 5),
+                    'titulo' => "{$h->materia->sigla}-{$h->grupo}", 'suspendida' => (bool) $encima,
+                    'detalle' => $encima
+                        ? 'Suspendida ese día por '.Prioridad::nombre($encima->tipo)." (reserva #{$encima->id}) · {$h->docente->nombre_completo}"
+                        : $h->docente->nombre_completo,
+                ];
+            }
             foreach ($reservas as $r) {
                 $bloques[] = [
                     'tipo' => $r->estado === 'APROBADA' ? 'RESERVA' : 'PENDIENTE',
                     'inicio' => substr($r->hora_inicio, 0, 5), 'fin' => substr($r->hora_fin, 0, 5),
-                    'titulo' => $r->tipo, 'detalle' => $r->solicitante->nombre_completo.' - '.$r->motivo,
+                    'titulo' => Prioridad::nombre($r->tipo), 'detalle' => $r->solicitante->nombre_completo.' - '.$r->motivo,
                 ];
             }
             usort($bloques, fn ($a, $b) => strcmp($a['inicio'], $b['inicio']));

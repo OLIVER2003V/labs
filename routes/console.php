@@ -76,7 +76,8 @@ Artisan::command('sistema:verificar', function () {
         $esperados = collect(SeguridadSeeder::PERMISOS)->flatten()->count();
         $ok($nPermisos >= $esperados, "Permisos: $nPermisos de $esperados", 'php artisan sistema:reparar');
         if ($enc) {
-            $ok(DB::table('rol_permiso')->where('rol_id', $enc->id)->count() >= $nPermisos, 'El Encargado tiene todos los permisos', 'php artisan sistema:reparar');
+            $ok(DB::table('rol_permiso')->where('rol_id', $enc->id)->count() >= Encargado::permisosEsperados(),
+                'El Encargado tiene todos los permisos (menos entregar objetos y asignar turnos)', 'php artisan sistema:reparar');
         }
         $ok(DB::table('menus')->count() >= count(SeguridadSeeder::MENU), 'Menú dinámico ('.DB::table('menus')->count().' opciones)', 'php artisan sistema:reparar');
         $principal = User::withTrashed()->with('rol')->where('email', Encargado::email())->first();

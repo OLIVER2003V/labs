@@ -51,7 +51,7 @@ class RegistroEstudianteTest extends SistemaTestCase
             'detalle_registro' => 'corto', 'password' => 'abc', 'password_confirmation' => 'xyz']);
 
         $r->assertStatus(422)->assertJsonValidationErrors(['codigo', 'nombre', 'email', 'telefono', 'carrera', 'detalle_registro', 'password']);
-        $this->assertSame('El registro universitario debe tener solo números (entre 6 y 12 dígitos).', $r->json('errors.codigo.0'));
+        $this->assertSame('El registro universitario debe tener solo números (entre 3 y 10 dígitos).', $r->json('errors.codigo.0'));
         $this->assertSame('Ese correo ya tiene una cuenta o una solicitud pendiente.', $r->json('errors.email.0'));
     }
 

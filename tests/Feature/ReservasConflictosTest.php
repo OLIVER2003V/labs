@@ -48,10 +48,10 @@ class ReservasConflictosTest extends SistemaTestCase
 
         $this->como('encargado@ficct.edu.bo');
         $this->putJson("/api/reservas/$a/aprobar")->assertOk()
-            ->assertJsonFragment(['message' => 'Reserva aprobada. Se rechazaron 1 solicitud(es) que pedían el mismo horario y se avisó a sus solicitantes.']);
+            ->assertJsonFragment(['message' => 'Reserva aprobada. Se rechazaron 1 solicitud(es) que pedían ese horario.']);
 
         $this->assertSame('RECHAZADA', Reserva::find($b)->estado);
-        $this->assertStringContainsString("asignado a la reserva #$a", Reserva::find($b)->observacion);
+        $this->assertStringContainsString("(reserva #$a)", Reserva::find($b)->observacion);
         $this->assertNotSame('RECHAZADA', Reserva::find($c)?->estado); // otro horario: no se toca
         $this->assertSame($antes + 1, $this->notificaciones('jsuarez@ficct.edu.bo'));
     }
@@ -65,7 +65,7 @@ class ReservasConflictosTest extends SistemaTestCase
         $this->como('encargado@ficct.edu.bo');
         $this->postJson('/api/reservas', $this->solicitud(['motivo' => 'Reunión de coordinación']))->assertCreated()
             ->assertJsonPath('data.estado', 'APROBADA')
-            ->assertJsonFragment(['message' => 'Reserva registrada y aprobada. Se rechazaron 1 solicitud(es) pendiente(s) que pedían ese horario.']);
+            ->assertJsonFragment(['message' => 'Reserva registrada y aprobada. Se rechazaron 1 solicitud(es) que pedían ese horario.']);
         $this->assertSame('RECHAZADA', Reserva::find($pendiente)->estado);
     }
 
@@ -96,7 +96,7 @@ class ReservasConflictosTest extends SistemaTestCase
     {
         $this->sinOtrasReservasLosMartes();
         $this->como('docente@ficct.edu.bo');
-        $id = $this->postJson('/api/reservas', $this->solicitud())->assertCreated()->json('data.id');
+        $id = $this->postJson('/api/reservas', $this->solicitud(['tipo' => 'PRACTICA']))->assertCreated()->json('data.id');
         $antes = $this->notificaciones('docente@ficct.edu.bo');
 
         $docente = User::whereHas('rol', fn ($r) => $r->where('codigo', 'DOC'))->where('estado', 'ACTIVO')->get()
@@ -118,7 +118,7 @@ class ReservasConflictosTest extends SistemaTestCase
     {
         $this->sinOtrasReservasLosMartes();
         $this->como('docente@ficct.edu.bo');
-        $id = $this->postJson('/api/reservas', $this->solicitud())->assertCreated()->json('data.id');
+        $id = $this->postJson('/api/reservas', $this->solicitud(['tipo' => 'PRACTICA']))->assertCreated()->json('data.id');
 
         $docente = User::whereHas('rol', fn ($r) => $r->where('codigo', 'DOC'))->where('estado', 'ACTIVO')->get()
             ->first(fn ($u) => ! Horario::where('docente_id', $u->id)->where('dia_semana', 2)->where('hora_fin', '>', '20:00:00')->exists());

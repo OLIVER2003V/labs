@@ -20,8 +20,23 @@ const diaCorto = (f) => {
 };
 const iniciales = (n) => n.split(' ').filter(Boolean).slice(0, 2).map((p) => p[0]).join('').toUpperCase();
 
-function Avatar({ nombre }) {
-    return <span className="grid size-10 shrink-0 place-items-center rounded-full bg-primario-tenue text-sm font-bold text-primario" aria-hidden>{iniciales(nombre)}</span>;
+function Avatar({ nombre, enLinea }) {
+    return (
+        <span className="relative grid size-10 shrink-0 place-items-center rounded-full bg-primario-tenue text-sm font-bold text-primario" aria-hidden>
+            {iniciales(nombre)}
+            {enLinea && <span className="absolute right-0 bottom-0 size-3 rounded-full border-2 border-superficie bg-exito" />}
+        </span>
+    );
+}
+
+/** "En línea" o "últ. vez hoy 14:32" (el servidor guarda la última actividad de cada usuario) */
+function presencia(u) {
+    if (u?.en_linea) return 'En línea';
+    if (!u?.ultima_vez) return '';
+    const d = new Date(u.ultima_vez);
+    const h = d.toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' });
+    const dias = Math.round((new Date().setHours(0, 0, 0, 0) - new Date(d).setHours(0, 0, 0, 0)) / 86400000);
+    return `últ. vez ${dias === 0 ? 'hoy' : dias === 1 ? 'ayer' : d.toLocaleDateString('es-BO', { day: '2-digit', month: '2-digit' })} a las ${h}`;
 }
 
 export default function Mensajes() {
@@ -105,6 +120,8 @@ export default function Mensajes() {
     const lista = (contactos ?? conversaciones.map((c) => c.usuario))
         .filter((u) => u.nombre.toLowerCase().includes(filtro.toLowerCase()));
     const datosDe = (id) => conversaciones.find((c) => c.usuario.id === id);
+    // La presencia del chat abierto se actualiza con cada consulta (cada 5 s)
+    const vivo = activo ? (datosDe(activo.id)?.usuario ?? activo) : null;
 
     return (
         <div>
@@ -135,7 +152,7 @@ export default function Mensajes() {
                                         className={`flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-superficie-2 ${activo?.id === u.id ? 'bg-primario-tenue' : ''}`}
                                         onClick={() => abrirChat(u)}
                                     >
-                                        <Avatar nombre={u.nombre} />
+                                        <Avatar nombre={u.nombre} enLinea={u.en_linea} />
                                         <span className="min-w-0 flex-1">
                                             <span className="flex items-baseline justify-between gap-2">
                                                 <span className="truncate font-semibold">{u.nombre}</span>
@@ -170,10 +187,13 @@ export default function Mensajes() {
                                 <button className="btn btn-fantasma btn-sm md:hidden" onClick={() => setActivo(null)} aria-label="Volver a las conversaciones">
                                     <ArrowLeft className="size-4" />
                                 </button>
-                                <Avatar nombre={activo.nombre} />
-                                <div>
-                                    <p className="font-semibold">{activo.nombre}</p>
-                                    <p className="text-xs text-suave">{activo.rol}</p>
+                                <Avatar nombre={activo.nombre} enLinea={vivo?.en_linea} />
+                                <div className="min-w-0">
+                                    <p className="truncate font-semibold">{activo.nombre}</p>
+                                    <p className="text-xs text-suave">
+                                        {activo.rol}
+                                        {presencia(vivo) && <> · <span className={vivo?.en_linea ? 'font-semibold text-exito' : ''}>{presencia(vivo)}</span></>}
+                                    </p>
                                 </div>
                             </header>
                             <ol className="min-h-0 flex-1 space-y-2 overflow-y-auto bg-superficie-2/40 p-4" aria-live="polite">

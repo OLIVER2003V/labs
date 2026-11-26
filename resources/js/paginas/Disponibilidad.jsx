@@ -18,7 +18,7 @@ const minutos = (h) => Number(h.slice(0, 2)) * 60 + Number(h.slice(3, 5));
 const COLOR = {
     BLOQUEO: 'z-10 bg-peligro-tenue border-peligro text-peligro shadow-sm', // al frente: ese día manda el bloqueo
     CLASE: 'bg-info-tenue border-info text-info',
-    RESERVA: 'bg-exito-tenue border-exito text-exito',
+    RESERVA: 'z-[5] bg-exito-tenue border-exito text-exito', // encima de una clase suspendida
     PENDIENTE: 'bg-alerta-tenue border-alerta text-alerta border-dashed',
 };
 
@@ -65,6 +65,7 @@ function Agenda() {
                 <span className="flex items-center gap-1"><span className="size-3 rounded border border-exito bg-exito-tenue" /> Reserva aprobada</span>
                 <span className="flex items-center gap-1"><span className="size-3 rounded border border-dashed border-alerta bg-alerta-tenue" /> Reserva pendiente</span>
                 <span className="flex items-center gap-1"><span className="size-3 rounded border border-peligro bg-peligro-tenue" /> Bloqueo (PSA, CUP, feriado…)</span>
+                <span className="flex items-center gap-1"><span className="size-3 rounded border border-dashed border-info bg-info-tenue opacity-60" /> <s>Clase suspendida</s> (ese día hay algo de mayor prioridad)</span>
             </div>
             {!datos ? <Cargando /> : (
                 <div className="overflow-x-auto">
@@ -95,7 +96,7 @@ function Agenda() {
                                             return (
                                                 <div
                                                     key={i}
-                                                    className={`absolute top-1 bottom-1 overflow-hidden rounded border px-1.5 py-0.5 text-[0.7rem] leading-tight ${COLOR[b.tipo]}`}
+                                                    className={`absolute top-1 bottom-1 overflow-hidden rounded border px-1.5 py-0.5 text-[0.7rem] leading-tight ${COLOR[b.tipo]}${b.suspendida ? ' border-dashed opacity-60 line-through' : ''}`}
                                                     style={{ left: `${Math.max(izq, 0)}%`, width: `${ancho}%` }}
                                                     title={`${b.inicio}–${b.fin} · ${b.titulo} · ${b.detalle}`}
                                                 >

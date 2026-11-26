@@ -23,7 +23,7 @@ class SeguridadSeeder extends Seeder
         'semestres' => ['ver' => 'Ver semestres y fechas bloqueadas', 'crear' => 'Registrar semestres y fechas bloqueadas', 'editar' => 'Modificar/activar/cerrar semestres', 'eliminar' => 'Eliminar semestres y fechas bloqueadas'],
         'horarios' => ['ver' => 'Ver horario base y materias', 'crear' => 'Registrar clases y materias', 'editar' => 'Modificar clases y materias', 'eliminar' => 'Eliminar clases y materias'],
         'disponibilidad' => ['ver' => 'Consultar disponibilidad de laboratorios'],
-        'reservas' => ['ver' => 'Ver sus reservas', 'ver_todas' => 'Ver reservas de todos', 'crear' => 'Solicitar reservas', 'aprobar' => 'Aprobar o rechazar reservas', 'cancelar' => 'Cancelar reservas', 'registrar_uso' => 'Registrar si una reserva se utilizó o no (genera multa)'],
+        'reservas' => ['ver' => 'Ver sus reservas', 'ver_todas' => 'Ver reservas de todos', 'crear' => 'Solicitar reservas', 'aprobar' => 'Aprobar o rechazar reservas', 'cancelar' => 'Cancelar reservas', 'registrar_uso' => 'Registrar si una reserva se utilizó o no (genera multa)', 'pedir_auxiliares' => 'Pedir auxiliares de apoyo al solicitar una reserva'],
         'equipos' => ['ver' => 'Ver inventario', 'crear' => 'Registrar equipos', 'editar' => 'Modificar equipos', 'eliminar' => 'Eliminar equipos'],
         'incidencias' => ['ver' => 'Ver incidencias', 'crear' => 'Reportar incidencias', 'gestionar' => 'Atender y resolver incidencias'],
         'objetos' => ['ver' => 'Ver objetos encontrados', 'crear' => 'Registrar objetos encontrados', 'entregar' => 'Registrar entrega de objetos'],
@@ -49,14 +49,14 @@ class SeguridadSeeder extends Seeder
     /** Permisos por rol de negocio (el Encargado recibe TODOS: ver Encargado::asegurarRol) */
     const ROL_PERMISOS = [
         'DOC' => ['laboratorios.ver', 'horarios.ver', 'disponibilidad.ver', 'reservas.ver', 'reservas.crear',
-            'reservas.cancelar', 'equipos.ver', 'incidencias.ver', 'incidencias.crear', 'pagos.ver', 'pagos.pagar', 'multas.ver'],
+            'reservas.cancelar', 'equipos.ver', 'incidencias.ver', 'incidencias.crear', 'pagos.ver', 'pagos.pagar', 'multas.ver', 'reservas.pedir_auxiliares'],
         'AUX' => ['laboratorios.ver', 'horarios.ver', 'disponibilidad.ver', 'reservas.ver', 'reservas.crear', 'reservas.cancelar',
             'equipos.ver', 'incidencias.ver', 'incidencias.crear', 'objetos.*', 'turnos.ver', 'asistencia.ver',
             'asistencia.marcar', 'pagos.ver', 'pagos.pagar', 'permutas.ver', 'permutas.solicitar', 'mensajes.usar', 'multas.ver', 'reservas.registrar_uso'],
         // Se registra solo desde el login; el Encargado aprueba la cuenta
         'EST' => ['laboratorios.ver', 'disponibilidad.ver', 'reservas.ver', 'reservas.crear', 'reservas.cancelar', 'multas.ver', 'pagos.ver', 'pagos.pagar'],
         'DIR' => ['dashboard.ver', 'reportes.ver', 'laboratorios.ver', 'horarios.ver', 'disponibilidad.ver', 'reservas.ver', 'reservas.ver_todas',
-            'reservas.crear', 'reservas.cancelar', 'equipos.ver', 'incidencias.ver', 'pagos.ver', 'pagos.pagar', 'pagos.ver_todos', 'multas.ver'],
+            'reservas.crear', 'reservas.cancelar', 'equipos.ver', 'incidencias.ver', 'pagos.ver', 'pagos.pagar', 'pagos.ver_todos', 'multas.ver', 'reservas.pedir_auxiliares'],
     ];
 
     /** grupo, título, ruta React, ícono (lucide), permiso requerido */

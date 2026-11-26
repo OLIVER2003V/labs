@@ -165,9 +165,10 @@ class DatosSeeder extends Seeder
         ])));
         $motivos = [
             'EXAMEN' => ['Primer parcial', 'Segundo parcial', 'Examen final', 'Examen de mesa', 'Segunda instancia'],
-            'RECUPERACION' => ['Recuperación de clase por feriado', 'Reposición de clase', 'Clase de nivelación'],
             'PRACTICA' => ['Práctica de laboratorio adicional', 'Taller de Docker', 'Práctica de SQL avanzado', 'Taller de Git y GitHub'],
-            'EVENTO' => ['Hackathon FICCT', 'Curso de Laravel - Sociedad Científica', 'Olimpiada de programación', 'Charla de ciberseguridad'],
+            'CAPACITACION' => ['Curso de Laravel - Sociedad Científica', 'Capacitación en ciberseguridad'],
+            'CONFERENCIA' => ['Charla de ciberseguridad', 'Conferencia de inteligencia artificial'],
+            'HACKATHON' => ['Hackathon FICCT', 'Olimpiada de programación'],
         ];
         $siglas = DB::table('materias')->pluck('sigla')->all();
         $labs = array_values(array_diff_key($this->labs, ['LAB-46' => 0]));
@@ -180,7 +181,7 @@ class DatosSeeder extends Seeder
                 continue;
             }
             $tipo = array_rand($motivos);
-            $motivo = $motivos[$tipo][array_rand($motivos[$tipo])].($tipo === 'EVENTO' ? '' : ' '.$siglas[array_rand($siglas)]);
+            $motivo = $motivos[$tipo][array_rand($motivos[$tipo])].(in_array($tipo, ['EXAMEN', 'PRACTICA'], true) ? ' '.$siglas[array_rand($siglas)] : '');
             [$hi, $hf] = $franjas[mt_rand(0, 5)];
             $lab = $labs[mt_rand(0, count($labs) - 1)];
             $libre = empty(Disponibilidad::conflictos($lab, $fecha->toDateString(), $hi, $hf));

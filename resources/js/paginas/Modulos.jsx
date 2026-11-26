@@ -372,7 +372,7 @@ export const Objetos = () => (
 export const Turnos = () => (
     <CrudPage
         titulo="Turnos de auxiliares"
-        descripcion="Turnos de 4 horas de lunes a viernes y rol rotativo de sábados (semestre activo)."
+        descripcion="Turnos fijos de 4 horas de lunes a viernes y rol rotativo de sábados (semestre activo). Se definen al inicio del semestre y no se modifican desde el sistema; los cambios puntuales se hacen con permutas."
         endpoint="turnos"
         singular="turno"
         permisos={{ crear: 'turnos.crear', editar: 'turnos.crear', eliminar: 'turnos.crear' }}
@@ -538,7 +538,9 @@ export const Usuarios = () => {
         ]}
         aFormulario={(f) => ({ codigo: f.codigo, nombre: f.nombre, apellido: f.apellido, email: f.email, telefono: f.telefono ?? '', rol_id: f.rol_id, estado: f.estado, password: '' })}
         campos={[
-            { name: 'codigo', label: 'Código / Registro', requerido: true, patron: /^[A-Za-z0-9-]{1,20}$/, mensajePatron: 'Hasta 20 letras, números o guiones.' },
+            // CU1: un usuario nuevo lleva un código de 3 a 10 dígitos. Al editar se respeta el código que ya tenía
+            { name: 'codigo', label: 'Código / Registro', requerido: true, soloCrear: true, patron: /^\d{3,10}$/, mensajePatron: 'Solo números, entre 3 y 10 dígitos.', inputMode: 'numeric', max: 10 },
+            { name: 'codigo', label: 'Código / Registro', requerido: true, soloEditar: true, patron: /^[A-Za-z0-9-]{1,20}$/, mensajePatron: 'Hasta 20 letras, números o guiones.', ayuda: 'Si lo cambia, el nuevo código debe tener solo números (3 a 10 dígitos).' },
             { name: 'rol_id', label: 'Rol', tipo: 'select', opciones: 'roles', requerido: true },
             { name: 'nombre', label: 'Nombre(s)', requerido: true, min: 2, max: 60, patron: P.soloLetras, mensajePatron: 'Solo letras y espacios.' },
             { name: 'apellido', label: 'Apellido(s)', requerido: true, min: 2, max: 60, patron: P.soloLetras, mensajePatron: 'Solo letras y espacios.' },

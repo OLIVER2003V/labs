@@ -89,7 +89,7 @@ class PsaCupTest extends SistemaTestCase
     {
         $this->como('docente@ficct.edu.bo');
         $lejos = Carbon::today()->addMonths(6)->next(Carbon::WEDNESDAY)->toDateString(); // después del fin del semestre activo
-        $datos = ['laboratorio_id' => $this->lab('LAB-42'), 'hora_inicio' => '10:00', 'hora_fin' => '12:00', 'tipo' => 'EVENTO', 'motivo' => 'Curso de verano'];
+        $datos = ['laboratorio_id' => $this->lab('LAB-42'), 'hora_inicio' => '10:00', 'hora_fin' => '12:00', 'tipo' => 'CONFERENCIA', 'motivo' => 'Curso de verano'];
 
         $this->postJson('/api/reservas', $datos + ['fecha' => $lejos])->assertCreated();
 

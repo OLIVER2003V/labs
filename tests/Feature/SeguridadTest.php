@@ -70,7 +70,9 @@ class SeguridadTest extends SistemaTestCase
         $enc = Rol::where('codigo', 'ENC')->first();
         $this->assertTrue((bool) $enc->es_sistema);
         $this->assertFalse(Rol::where('codigo', 'ADM')->exists());               // no hay rol Administrador aparte
-        $this->assertSame(DB::table('permisos')->count(), DB::table('rol_permiso')->where('rol_id', $enc->id)->count()); // todos los permisos
+        // todos los permisos, menos entregar objetos y asignar turnos (eso no lo hace el Encargado)
+        $this->assertSame(\App\Support\Encargado::permisosEsperados(), DB::table('rol_permiso')->where('rol_id', $enc->id)->count());
+        $this->assertFalse(User::where('email', 'encargado@ficct.edu.bo')->first()->tienePermiso('objetos.entregar'));
 
         $yo = $this->como('encargado@ficct.edu.bo');
         $this->putJson("/api/roles/{$enc->id}/permisos", ['permisos' => []])->assertStatus(422); // nadie le recorta permisos

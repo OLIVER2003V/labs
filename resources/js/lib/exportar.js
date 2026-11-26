@@ -106,7 +106,11 @@ export function imprimir({ titulo, subtitulo, resumen = [], secciones }) {
         <footer><span>Sistema de Gestión de Laboratorios · FICCT - UAGRM</span><span>${esc(emitido)}</span></footer>
       </body></html>`;
 
-    // Se imprime desde un iframe oculto: no abre ventanas nuevas (que el navegador podría bloquear)
+    imprimirHtml(html);
+}
+
+/** Imprime un documento HTML completo desde un iframe oculto: no abre ventanas nuevas (que el navegador podría bloquear) */
+function imprimirHtml(html) {
     const iframe = document.createElement('iframe');
     iframe.setAttribute('aria-hidden', 'true');
     iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;';
@@ -122,4 +126,52 @@ export function imprimir({ titulo, subtitulo, resumen = [], secciones }) {
         iframe.contentWindow.print();
         setTimeout(quitar, 120000); // por si el navegador no avisa al terminar
     }, 300);
+}
+
+const ESTILOS_COMPROBANTE = `
+  @page { size: A5; margin: 12mm; }
+  * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { font-family: "Segoe UI", Calibri, Arial, sans-serif; color: #1E293B; font-size: 11px; margin: 0; }
+  header { display: flex; align-items: center; gap: 12px; border-bottom: 3px solid #0F2A4A; padding-bottom: 8px; }
+  header .marca { font-size: 10px; color: #5B6B7F; line-height: 1.3; }
+  header .marca b { color: #0F2A4A; font-size: 12px; }
+  h1 { font-size: 16px; color: #0F2A4A; margin: 14px 0 2px; letter-spacing: .5px; }
+  .nro { color: #5B6B7F; margin: 0 0 12px; }
+  .estado { display: inline-block; border: 1.5px solid #15803D; color: #15803D; border-radius: 4px; padding: 2px 8px; font-weight: 700; font-size: 10px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+  th { text-align: left; width: 38%; color: #5B6B7F; font-weight: 600; padding: 6px 8px; border-bottom: 1px solid #DDE3EA; vertical-align: top; }
+  td { padding: 6px 8px; border-bottom: 1px solid #DDE3EA; word-break: break-all; }
+  .monto { margin-top: 14px; border: 1px solid #B8C4D2; border-left: 4px solid #E5432F; border-radius: 4px; padding: 8px 10px; display: flex; justify-content: space-between; align-items: baseline; }
+  .monto span { color: #5B6B7F; text-transform: uppercase; font-size: 9px; letter-spacing: .3px; }
+  .monto b { font-size: 20px; color: #0F2A4A; }
+  .nota { margin-top: 12px; color: #5B6B7F; font-size: 9.5px; }
+  footer { margin-top: 18px; border-top: 1px solid #B8C4D2; padding-top: 4px; color: #5B6B7F; font-size: 9px; display: flex; justify-content: space-between; }
+`;
+
+/**
+ * Comprobante de pago: solo los datos del pago, con el formato del sistema (sin menú ni botones de la pantalla).
+ * @param {{codigo:string, descripcion:string, monto:number|string, autorizacion?:string, updated_at?:string, pasarela?:string}} trx
+ * @param {{pagador?:string, modoPrueba?:boolean}} extra
+ */
+export function imprimirComprobante(trx, { pagador, modoPrueba } = {}) {
+    const emitido = new Date().toLocaleString('es-BO', { dateStyle: 'short', timeStyle: 'short' });
+    const pagado = trx.updated_at ? new Date(trx.updated_at).toLocaleString('es-BO', { dateStyle: 'short', timeStyle: 'short' }) : '';
+    const monto = `Bs ${Number(trx.monto).toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    const fila = (k, v) => (v ? `<tr><th>${esc(k)}</th><td>${esc(v)}</td></tr>` : '');
+    const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Comprobante ${esc(trx.codigo)}</title><style>${ESTILOS_COMPROBANTE}</style></head><body>
+        <header>${LOGO}<div class="marca"><b>Laboratorios 4to Piso</b><br>Facultad de Ingeniería en Ciencias de la Computación y Telecomunicaciones · UAGRM</div></header>
+        <h1>COMPROBANTE DE PAGO</h1>
+        <p class="nro">N.° ${esc(trx.codigo)} &nbsp; <span class="estado">PAGADO</span></p>
+        <table>
+          ${fila('Pagado por', pagador)}
+          ${fila('Concepto', trx.descripcion)}
+          ${fila('Fecha de pago', pagado)}
+          ${fila('Medio de pago', 'Tarjeta de débito o crédito (Stripe)')}
+          ${fila('Referencia Stripe', trx.autorizacion)}
+        </table>
+        <div class="monto"><span>Total pagado</span><b>${esc(monto)}</b></div>
+        ${modoPrueba ? '<p class="nota">Pago realizado en modo de prueba de Stripe: no se cobró dinero real.</p>' : ''}
+        <footer><span>Sistema de Gestión de Laboratorios · FICCT - UAGRM</span><span>Emitido el ${esc(emitido)}</span></footer>
+      </body></html>`;
+    imprimirHtml(html);
 }

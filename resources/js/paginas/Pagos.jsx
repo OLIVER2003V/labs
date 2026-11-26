@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Ban, CheckCircle2, Clock, CreditCard, ExternalLink, Loader2, Lock, Plus, Search, XCircle } from 'lucide-react';
+import { Ban, CheckCircle2, Clock, CreditCard, ExternalLink, Loader2, Lock, Plus, Printer, Search, XCircle } from 'lucide-react';
 import api, { erroresCampos, mensajeError } from '../lib/api';
 import { validar } from '../lib/validar';
 import useListado from '../lib/useListado';
 import { bs, fecha, fechaHora, hoyISO } from '../lib/formato';
+import { imprimirComprobante } from '../lib/exportar';
 import { useAuth } from '../contexto/AuthContext';
 import { Badge, Cargando, Confirmar, Encabezado, Formulario, Modal, Paginacion, Tarjeta, useOpciones, useToast, Vacio } from '../componentes/ui';
 
@@ -70,7 +71,7 @@ export function ModalPago({ abierto, titulo, monto, objetivo, onCerrar }) {
 export function ResultadoPago() {
     const [params] = useSearchParams();
     const navegar = useNavigate();
-    const { refrescarAvisos } = useAuth();
+    const { refrescarAvisos, usuario } = useAuth();
     const id = params.get('trx');
     const cancelado = params.get('cancelado');
     const [r, setR] = useState(null);
@@ -149,7 +150,7 @@ export function ResultadoPago() {
                     </>
                 )}
                 <div className="mt-4 flex gap-2">
-                    {ok && <button className="btn btn-secundario" onClick={() => window.print()}>Imprimir comprobante</button>}
+                    {ok && <button className="btn btn-secundario" onClick={() => imprimirComprobante(trx, { pagador: usuario?.nombre_completo, modoPrueba: r.modo_prueba })}><Printer className="size-4" aria-hidden /> Imprimir comprobante</button>}
                     <button className="btn btn-primario" onClick={() => { sessionStorage.removeItem('pago_volver'); navegar(volver.current); }}>Volver</button>
                 </div>
             </div>
@@ -290,7 +291,7 @@ export function MisPagos() {
                 {!trx.datos ? <Cargando /> : !trx.datos.data.length ? <Vacio texto="Sin transacciones." /> : (
                     <div className="overflow-x-auto">
                         <table className="tabla w-full text-sm">
-                            <thead><tr><th>Código</th><th>Fecha</th>{verTodos && <th>Usuario</th>}<th>Descripción</th><th>Pasarela</th><th>Monto</th><th>Estado</th></tr></thead>
+                            <thead><tr><th>Código</th><th>Fecha</th>{verTodos && <th>Usuario</th>}<th>Descripción</th><th>Pasarela</th><th>Monto</th><th>Estado</th><th><span className="sr-only">Comprobante</span></th></tr></thead>
                             <tbody>
                                 {trx.datos.data.map((t) => (
                                     <tr key={t.id}>
@@ -301,6 +302,13 @@ export function MisPagos() {
                                         <td className="text-xs">{{ stripe: 'Tarjeta (Stripe)', pagofacil: 'QR PagoFácil', simulada: 'QR (simulado)', tarjeta: 'Tarjeta (simulada)' }[t.pasarela] ?? '—'}</td>
                                         <td className="font-semibold">{bs(t.monto)}</td>
                                         <td><Badge valor={t.estado} />{['RECHAZADA', 'EXPIRADA'].includes(t.estado) && <span className="block text-xs text-suave">{t.mensaje}</span>}</td>
+                                        <td className="text-right">
+                                            {t.estado === 'APROBADA' && (
+                                                <button className="btn btn-secundario btn-sm" title="Imprimir comprobante" onClick={() => imprimirComprobante(t, { pagador: t.usuario?.nombre_completo })}>
+                                                    <Printer className="size-4" aria-hidden /> <span className="hidden sm:inline">Comprobante</span>
+                                                </button>
+                                            )}
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>

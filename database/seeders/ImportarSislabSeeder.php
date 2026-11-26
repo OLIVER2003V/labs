@@ -62,7 +62,12 @@ class ImportarSislabSeeder extends Seeder
         $this->lote('reservas', $s('reserva')->orderBy('id')->get()->map(fn ($r) => [
             'id' => $r->id, 'laboratorio_id' => $r->laboratorio_id, 'solicitante_id' => $r->solicitante_id, 'fecha' => $r->fecha,
             'hora_inicio' => $r->hora_inicio, 'hora_fin' => $r->hora_fin,
-            'tipo' => str_starts_with((string) $r->tipo, 'DEFENSA') ? 'DEFENSA' : $r->tipo,
+            'tipo' => match (true) {
+                str_starts_with((string) $r->tipo, 'DEFENSA'), $r->tipo === 'RECUPERACION' => 'EXAMEN',
+                $r->tipo === 'EVENTO' => 'CONFERENCIA',
+                in_array($r->tipo, \App\Support\Prioridad::codigos(), true) => $r->tipo,
+                default => 'CONFERENCIA',
+            },
             'motivo' => $vacio($r->motivo) ?? 'Sin motivo', 'estado' => $r->estado, 'resuelto_por' => $r->resuelto_por,
             'observacion' => $r->observacion, 'created_at' => $r->creado_en ?? now(), 'updated_at' => $r->creado_en ?? now(),
         ]));

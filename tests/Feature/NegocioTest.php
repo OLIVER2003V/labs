@@ -42,9 +42,10 @@ class NegocioTest extends SistemaTestCase
         $this->claseEn('LAB-41', $fecha, '08:00', '10:00');
         $this->como('docente@ficct.edu.bo');
 
+        // Una práctica de auxiliar está DEBAJO de las clases en la jerarquía: no puede ocupar su lugar
         $r = $this->postJson('/api/reservas', [
             'laboratorio_id' => Laboratorio::where('codigo', 'LAB-41')->value('id'), 'fecha' => $fecha,
-            'hora_inicio' => '09:00', 'hora_fin' => '11:00', 'tipo' => 'EXAMEN', 'motivo' => 'Parcial de prueba',
+            'hora_inicio' => '09:00', 'hora_fin' => '11:00', 'tipo' => 'PRACTICA', 'motivo' => 'Práctica de prueba',
         ]);
 
         $r->assertStatus(422)->assertJsonStructure(['message', 'conflictos', 'sugerencias']);

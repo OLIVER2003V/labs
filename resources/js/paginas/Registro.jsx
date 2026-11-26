@@ -15,7 +15,7 @@ import Footer from '../componentes/Footer';
 const CARRERAS = ['Ingeniería Informática', 'Ingeniería de Sistemas', 'Ingeniería en Redes y Telecomunicaciones', 'Ingeniería en Robótica'];
 
 const CAMPOS = [
-    { name: 'codigo', label: 'Registro universitario', requerido: true, patron: /^\d{6,12}$/, mensajePatron: 'Solo números, entre 6 y 12 dígitos.', placeholder: '222058730' },
+    { name: 'codigo', label: 'Registro universitario', requerido: true, patron: /^\d{3,10}$/, mensajePatron: 'Solo números, entre 3 y 10 dígitos.', placeholder: '222058730' },
     { name: 'carrera', label: 'Carrera', tipo: 'select', requerido: true, opciones: CARRERAS },
     { name: 'nombre', label: 'Nombre(s)', requerido: true, min: 2, max: 60, patron: P.soloLetras, mensajePatron: 'Solo letras y espacios.' },
     { name: 'apellido', label: 'Apellido(s)', requerido: true, min: 2, max: 60, patron: P.soloLetras, mensajePatron: 'Solo letras y espacios.' },

@@ -111,7 +111,9 @@ class Reportes
         $base = fn () => DB::table('reservas')->whereBetween('reservas.fecha', [$desde, $hasta]);
         $total = $base()->count();
         $porEstado = self::contar($base(), 'estado', ['PENDIENTE', 'APROBADA', 'RECHAZADA', 'CANCELADA']);
-        $porTipo = self::contar($base(), 'tipo', ['EXAMEN', 'RECUPERACION', 'PRACTICA', 'EVENTO', 'DEFENSA']);
+        // En el orden de la jerarquía (Hackathon, CUP, PSA, Examen, …), con su nombre legible
+        $porTipo = collect(self::contar($base(), 'tipo', \App\Support\Prioridad::codigos()))
+            ->mapWithKeys(fn ($n, $t) => [\App\Support\Prioridad::nombre($t) => $n])->all();
         $horas = "SUM(CASE WHEN reservas.estado = 'APROBADA' THEN EXTRACT(EPOCH FROM (hora_fin - hora_inicio)) / 3600 ELSE 0 END)";
 
         $porLab = DB::table('laboratorios')->leftJoin('reservas', fn ($j) => $j->on('reservas.laboratorio_id', '=', 'laboratorios.id')->whereBetween('reservas.fecha', [$desde, $hasta]))

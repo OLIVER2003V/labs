@@ -17,7 +17,7 @@ class Triggers
     const AUDITADAS = [
         'usuarios', 'roles', 'rol_permiso', 'laboratorios', 'semestres', 'materias', 'horarios',
         'reservas', 'equipos', 'equipos_red', 'incidencias', 'objetos_encontrados', 'turnos', 'asistencias', 'permisos_auxiliar', 'permutas',
-        'conceptos_pago', 'planes_pago', 'cuotas', 'transacciones', 'multas',
+        'conceptos_pago', 'planes_pago', 'cuotas', 'transacciones', 'multas', 'reserva_auxiliares', 'configuracion',
     ];
 
     /** Triggers que deben existir: nombre => tabla */
@@ -84,7 +84,10 @@ SQL);
         }
 
         // ---------- Reservas: impedir choques (aunque se inserte por SQL directo) ----------
-        DB::unprepared(<<<'SQL'
+        // CU4: las reservas que están POR ENCIMA de las clases en la jerarquía (Hackathon, CUP, PSA, Examen, Capacitación,
+        // Conferencia) sí pueden ocupar un horario de clase: ese día la clase se suspende (ver App\Support\Prioridad).
+        $sobreClases = "'".implode("','", \App\Support\Prioridad::sobreClases())."'";
+        DB::unprepared(str_replace('__TIPOS_SOBRE_CLASES__', $sobreClases, <<<'SQL'
 CREATE OR REPLACE FUNCTION fn_reserva_sin_choque() RETURNS TRIGGER AS $$
 BEGIN
     IF NEW.estado = 'APROBADA' THEN
@@ -94,7 +97,7 @@ BEGIN
                      AND r.hora_inicio < NEW.hora_fin AND NEW.hora_inicio < r.hora_fin) THEN
             RAISE EXCEPTION 'CHOQUE: ya existe una reserva aprobada en ese laboratorio y horario';
         END IF;
-        IF EXISTS (SELECT 1 FROM horarios h JOIN semestres s ON s.id = h.semestre_id
+        IF NEW.tipo NOT IN (__TIPOS_SOBRE_CLASES__) AND EXISTS (SELECT 1 FROM horarios h JOIN semestres s ON s.id = h.semestre_id
                    WHERE s.estado = 'ACTIVO' AND h.laboratorio_id = NEW.laboratorio_id
                      AND NEW.fecha BETWEEN s.fecha_inicio AND s.fecha_fin
                      AND h.dia_semana = EXTRACT(ISODOW FROM NEW.fecha)
@@ -108,7 +111,7 @@ $$ LANGUAGE plpgsql SET search_path FROM CURRENT;
 DROP TRIGGER IF EXISTS tg_reserva_sin_choque ON reservas;
 CREATE TRIGGER tg_reserva_sin_choque BEFORE INSERT OR UPDATE ON reservas
     FOR EACH ROW EXECUTE FUNCTION fn_reserva_sin_choque();
-SQL);
+SQL));
 
         // ---------- Incidencias: el equipo pasa a EN_REPARACION / vuelve a OPERATIVO ----------
         DB::unprepared(<<<'SQL'

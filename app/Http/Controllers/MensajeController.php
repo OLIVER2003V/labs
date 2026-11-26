@@ -85,8 +85,17 @@ class MensajeController extends Controller
                 ->where('permisos.codigo', 'mensajes.usar')->select('rol_permiso.rol_id'));
     }
 
+    /** Minutos sin actividad después de los cuales ya no se muestra "en línea" */
+    const MINUTOS_EN_LINEA = 2;
+
     private function contacto(?User $u, int $id): array
     {
-        return ['id' => $id, 'nombre' => $u?->nombre_completo ?? 'Usuario eliminado', 'rol' => $u?->rol?->nombre ?? ''];
+        // Presencia: el middleware RegistrarBitacora guarda en "presencia" la última vez que cada usuario usó el sistema
+        $visto = DB::table('presencia')->where('usuario_id', $id)->value('visto_en');
+        $visto = $visto ? \Carbon\Carbon::parse($visto) : null;
+
+        return ['id' => $id, 'nombre' => $u?->nombre_completo ?? 'Usuario eliminado', 'rol' => $u?->rol?->nombre ?? '',
+            'en_linea' => $visto !== null && $visto->gte(now()->subMinutes(self::MINUTOS_EN_LINEA)),
+            'ultima_vez' => $visto?->toIso8601String()];
     }
 }

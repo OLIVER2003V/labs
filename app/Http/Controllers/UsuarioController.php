@@ -31,10 +31,22 @@ class UsuarioController extends CrudController
         return $request->boolean('eliminados') ? $query->onlyTrashed() : $query;
     }
 
+    /** CU1 - Código (registro universitario / código docente) de un usuario nuevo: solo números, de 3 a 10 dígitos */
+    const CODIGO = '/^\d{3,10}$/';
+
+    protected function mensajes(): array
+    {
+        return ['codigo.regex' => 'El código debe tener solo números, entre 3 y 10 dígitos.'];
+    }
+
     protected function reglas(Request $request, ?Model $registro): array
     {
+        // Al crear, o si se cambia el código, debe cumplir la regla. Los códigos antiguos que no la cumplen
+        // (ej: ENC-001 de la carga inicial) se conservan al editar otros datos del usuario.
+        $estricto = ! $registro || $request->input('codigo') !== $registro->codigo;
+
         return [
-            'codigo' => ['required', 'regex:/^[A-Za-z0-9-]{1,20}$/', Rule::unique('usuarios', 'codigo')->ignore($registro?->id)],
+            'codigo' => ['required', $estricto ? 'regex:'.self::CODIGO : 'string', Rule::unique('usuarios', 'codigo')->ignore($registro?->id)],
             'nombre' => ['required', 'string', 'min:2', 'max:60', 'regex:/^[\pL\s]+$/u'],
             'apellido' => ['required', 'string', 'min:2', 'max:60', 'regex:/^[\pL\s]+$/u'],
             'email' => ['required', 'email', 'max:100', Rule::unique('usuarios', 'email')->ignore($registro?->id)],

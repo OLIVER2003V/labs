@@ -104,7 +104,7 @@ class AuthController extends Controller
     public function registro(Request $request): JsonResponse
     {
         $d = $request->validate([
-            'codigo' => ['required', 'regex:/^\d{6,12}$/', Rule::unique('usuarios', 'codigo')],
+            'codigo' => ['required', 'regex:'.UsuarioController::CODIGO, Rule::unique('usuarios', 'codigo')],
             'nombre' => ['required', 'string', 'min:2', 'max:60', 'regex:/^[\pL\s]+$/u'],
             'apellido' => ['required', 'string', 'min:2', 'max:60', 'regex:/^[\pL\s]+$/u'],
             'email' => ['required', 'email', 'max:100', Rule::unique('usuarios', 'email')],
@@ -113,7 +113,7 @@ class AuthController extends Controller
             'detalle_registro' => ['required', 'string', 'min:10', 'max:300'],
             'password' => ['required', 'confirmed', Password::min(8)->letters()->numbers()],
         ], [
-            'codigo.regex' => 'El registro universitario debe tener solo números (entre 6 y 12 dígitos).',
+            'codigo.regex' => 'El registro universitario debe tener solo números (entre 3 y 10 dígitos).',
             'codigo.unique' => 'Ese registro universitario ya tiene una cuenta o una solicitud pendiente.',
             'email.unique' => 'Ese correo ya tiene una cuenta o una solicitud pendiente.',
             'telefono.regex' => 'El teléfono debe tener 8 dígitos y empezar con 6 o 7.',
@@ -280,6 +280,10 @@ class AuthController extends Controller
                 ->where(fn ($q) => $q->where(fn ($x) => $x->where('reemplazante_id', $usuario->id)->where('estado', 'PENDIENTE'))
                     ->when(in_array('permutas.aprobar', $permisos, true), fn ($x) => $x->orWhere('estado', 'ACEPTADA')))
                 ->count();
+        }
+        if (in_array('reservas.aprobar', $permisos, true)) {     // CU4: solicitudes por aprobar + reservas a las que les faltan auxiliares
+            $avisos['/reservas'] = \App\Models\Reserva::where('estado', 'PENDIENTE')->whereDate('fecha', '>=', now()->toDateString())->count()
+                + \App\Models\Reserva::faltanAuxiliares()->count();
         }
 
         return $avisos;

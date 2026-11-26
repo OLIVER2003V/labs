@@ -26,15 +26,29 @@ class Encargado
         return DB::table('roles')->where('codigo', self::ROL)->value('id');
     }
 
-    /** El rol Encargado: de sistema y con todos los permisos (los nuevos permisos también le llegan) */
+    /**
+     * Lo que el Encargado NO maneja: la entrega de objetos encontrados la registran los auxiliares,
+     * y los turnos de los auxiliares son fijos (vienen del horario cargado; nadie los edita desde el sistema).
+     */
+    const EXCLUIDOS = ['objetos.entregar', 'turnos.crear'];
+
+    /** El rol Encargado: de sistema y con todos los permisos menos los EXCLUIDOS (los permisos nuevos también le llegan) */
     public static function asegurarRol(): int
     {
         DB::table('roles')->updateOrInsert(['codigo' => self::ROL],
             ['nombre' => 'Encargado de Laboratorios', 'descripcion' => self::DESCRIPCION, 'es_sistema' => true, 'updated_at' => now()]);
         $rol = self::rolId();
-        DB::table('rol_permiso')->insertOrIgnore(DB::table('permisos')->pluck('id')->map(fn ($p) => ['rol_id' => $rol, 'permiso_id' => $p])->all());
+        $permisos = DB::table('permisos')->pluck('id', 'codigo');
+        DB::table('rol_permiso')->insertOrIgnore($permisos->except(self::EXCLUIDOS)->map(fn ($p) => ['rol_id' => $rol, 'permiso_id' => $p])->values()->all());
+        DB::table('rol_permiso')->where('rol_id', $rol)->whereIn('permiso_id', $permisos->only(self::EXCLUIDOS)->values())->delete();
 
         return $rol;
+    }
+
+    /** Cuántos permisos debe tener el Encargado (todos menos los excluidos) */
+    public static function permisosEsperados(): int
+    {
+        return DB::table('permisos')->whereNotIn('codigo', self::EXCLUIDOS)->count();
     }
 
     /**

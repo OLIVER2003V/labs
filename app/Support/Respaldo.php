@@ -15,10 +15,10 @@ class Respaldo
     /** Tablas en orden de dependencias (padres antes que hijos) */
     const TABLAS = [
         'roles', 'permisos', 'rol_permiso', 'menus', 'usuarios', 'personal_access_tokens',
-        'laboratorios', 'semestres', 'fechas_bloqueadas', 'materias', 'horarios', 'reservas',
+        'laboratorios', 'semestres', 'fechas_bloqueadas', 'materias', 'horarios', 'reservas', 'reserva_auxiliares',
         'equipos', 'equipos_red', 'incidencias', 'objetos_encontrados', 'turnos', 'asistencias', 'permisos_auxiliar', 'permutas',
         'conceptos_pago', 'planes_pago', 'cuotas', 'multas', 'transacciones',
-        'notificaciones', 'mensajes', 'bitacora', 'visitas_pagina', 'auditoria',
+        'notificaciones', 'mensajes', 'configuracion', 'presencia', 'bitacora', 'visitas_pagina', 'auditoria',
     ];
 
     public static function carpeta(): string

@@ -12,7 +12,8 @@ use Symfony\Component\HttpFoundation\Response;
  * Se ejecuta en cada petición autenticada a la API:
  *  1. Rechaza a usuarios dados de baja (estado INACTIVO).
  *  2. Indica a PostgreSQL quién es el usuario (app.usuario_id) para que los triggers de auditoría lo guarden.
- *  3. Registra el acceso en la bitácora (recurso, método, IP, código HTTP) → "tráfico" y "recursos más accedidos".
+ *  3. Actualiza la presencia del usuario (chat: en línea / última vez).
+ *  4. Registra el acceso en la bitácora (recurso, método, IP, código HTTP) → "tráfico" y "recursos más accedidos".
  */
 class RegistrarBitacora
 {
@@ -30,6 +31,10 @@ class RegistrarBitacora
 
         if ($usuario) {
             DB::select("SELECT set_config('app.usuario_id', ?, false)", [(string) $usuario->id]);
+            // Chat: "en línea / última vez". Se escribe como mucho cada 30 s por usuario (la pantalla consulta cada pocos segundos)
+            DB::statement("INSERT INTO presencia (usuario_id, visto_en) VALUES (?, now())
+                ON CONFLICT (usuario_id) DO UPDATE SET visto_en = EXCLUDED.visto_en WHERE presencia.visto_en < now() - interval '30 seconds'",
+                [$usuario->id]);
         }
 
         $response = $next($request);

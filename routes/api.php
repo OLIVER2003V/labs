@@ -118,6 +118,11 @@ Route::middleware(['auth:sanctum', 'bitacora'])->group(function () {
     Route::get('reservas', [ReservaController::class, 'index'])->middleware('permiso:reservas.ver');
     Route::get('reservas/{id}', [ReservaController::class, 'show'])->whereNumber('id')->middleware('permiso:reservas.ver');
     Route::post('reservas', [ReservaController::class, 'store'])->middleware('permiso:reservas.crear');
+    Route::get('reservas/configuracion', [ReservaController::class, 'configuracion'])->middleware('permiso:reservas.aprobar');
+    Route::put('reservas/configuracion', [ReservaController::class, 'guardarConfiguracion'])->middleware('permiso:reservas.aprobar');
+    Route::get('reservas/{id}/auxiliares', [ReservaController::class, 'auxiliares'])->whereNumber('id')->middleware('permiso:reservas.aprobar');
+    Route::post('reservas/{id}/auxiliares', [ReservaController::class, 'asignarAuxiliar'])->whereNumber('id')->middleware('permiso:reservas.aprobar');
+    Route::delete('reservas/{id}/auxiliares/{auxiliarId}', [ReservaController::class, 'quitarAuxiliar'])->whereNumber(['id', 'auxiliarId'])->middleware('permiso:reservas.aprobar');
     Route::put('reservas/{id}/aprobar', [ReservaController::class, 'aprobar'])->middleware('permiso:reservas.aprobar');
     Route::put('reservas/{id}/rechazar', [ReservaController::class, 'rechazar'])->middleware('permiso:reservas.aprobar');
     Route::put('reservas/{id}/cancelar', [ReservaController::class, 'cancelar'])->middleware('permiso:reservas.cancelar');
