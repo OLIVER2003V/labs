@@ -209,6 +209,26 @@ class JerarquiaReservasTest extends SistemaTestCase
         $this->assertSame(0, Reserva::faltanAuxiliares()->where('id', $id)->count());
     }
 
+    public function test_no_se_pueden_pedir_mas_auxiliares_de_los_disponibles(): void
+    {
+        $fecha = $this->martesLibre();
+        $lab = $this->labLibre($fecha, '21:00', '22:00');
+        $this->como('docente@ficct.edu.bo');
+        $hay = $this->getJson("/api/reservas/auxiliares-disponibles?fecha=$fecha&hora_inicio=21:00&hora_fin=22:00")->assertOk()->json('disponibles');
+        $this->assertSame(\App\Services\AsignadorAuxiliares::disponibles($fecha, '21:00', '22:00'), $hay);
+
+        // Uno con permiso ese día ya no cuenta
+        $aux = User::whereHas('rol', fn ($q) => $q->where('codigo', 'AUX'))->where('estado', 'ACTIVO')->first();
+        DB::table('permisos_auxiliar')->insert(['auxiliar_id' => $aux->id, 'fecha' => $fecha, 'motivo' => 'Permiso de prueba',
+            'registrado_por' => User::where('email', 'encargado@ficct.edu.bo')->value('id'), 'created_at' => now(), 'updated_at' => now()]);
+        $this->assertSame($hay - 1, \App\Services\AsignadorAuxiliares::disponibles($fecha, '21:00', '22:00'));
+
+        $r = $this->reserva($lab, $fecha, 'EXAMEN', ['auxiliares_solicitados' => $hay])->assertStatus(422)
+            ->assertJsonValidationErrors(['auxiliares_solicitados']);
+        $this->assertStringContainsString('Solo hay '.($hay - 1), $r->json('message'));
+        $this->reserva($lab, $fecha, 'EXAMEN', ['auxiliares_solicitados' => $hay - 1])->assertCreated();
+    }
+
     public function test_el_chat_muestra_en_linea_y_ultima_vez(): void
     {
         $aux = User::whereHas('rol', fn ($q) => $q->where('codigo', 'AUX'))->where('estado', 'ACTIVO')->first();

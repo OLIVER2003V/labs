@@ -118,6 +118,7 @@ Route::middleware(['auth:sanctum', 'bitacora'])->group(function () {
     Route::get('reservas', [ReservaController::class, 'index'])->middleware('permiso:reservas.ver');
     Route::get('reservas/{id}', [ReservaController::class, 'show'])->whereNumber('id')->middleware('permiso:reservas.ver');
     Route::post('reservas', [ReservaController::class, 'store'])->middleware('permiso:reservas.crear');
+    Route::get('reservas/auxiliares-disponibles', [ReservaController::class, 'auxiliaresDisponibles'])->middleware('permiso:reservas.pedir_auxiliares');
     Route::get('reservas/configuracion', [ReservaController::class, 'configuracion'])->middleware('permiso:reservas.aprobar');
     Route::put('reservas/configuracion', [ReservaController::class, 'guardarConfiguracion'])->middleware('permiso:reservas.aprobar');
     Route::get('reservas/{id}/auxiliares', [ReservaController::class, 'auxiliares'])->whereNumber('id')->middleware('permiso:reservas.aprobar');

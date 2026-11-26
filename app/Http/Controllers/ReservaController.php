@@ -118,8 +118,18 @@ class ReservaController extends CrudController
             ], 422));
         }
 
-        // Solo docentes y director piden auxiliares (ej: para cuidar un examen)
+        // Solo docentes y director piden auxiliares (ej: para cuidar un examen), y no más de los que hay disponibles
         $datos['auxiliares_solicitados'] = $usuario->tienePermiso('reservas.pedir_auxiliares') ? (int) ($datos['auxiliares_solicitados'] ?? 0) : 0;
+        if ($datos['auxiliares_solicitados'] > 0) {
+            $hay = AsignadorAuxiliares::disponibles($datos['fecha'], $datos['hora_inicio'], $datos['hora_fin']);
+            if ($datos['auxiliares_solicitados'] > $hay) {
+                abort(response()->json([
+                    'message' => "Solo hay $hay auxiliar(es) disponible(s) el ".Carbon::parse($datos['fecha'])->format('d/m/Y')
+                        ." de {$datos['hora_inicio']} a {$datos['hora_fin']}. Pida como máximo $hay.",
+                    'errors' => ['auxiliares_solicitados' => ["Como máximo $hay (los auxiliares disponibles en ese horario)."]],
+                ], 422));
+            }
+        }
         $datos['solicitante_id'] = $usuario->id;
         $datos['estado'] = 'PENDIENTE'; // se aprueba (si corresponde) en despuesDeGuardar, con la jerarquía
 
@@ -183,6 +193,18 @@ class ReservaController extends CrudController
             'message' => trim('Reserva aprobada. '.AprobacionReservas::resumen($res)),
             'data' => $reserva->fresh($this->con),
         ]);
+    }
+
+    /** GET /api/reservas/auxiliares-disponibles?fecha=&hora_inicio=&hora_fin= → cuántos auxiliares se pueden pedir */
+    public function auxiliaresDisponibles(Request $request): JsonResponse
+    {
+        $d = $request->validate([
+            'fecha' => ['required', 'date'],
+            'hora_inicio' => ['required', 'date_format:H:i'],
+            'hora_fin' => ['required', 'date_format:H:i', 'after:hora_inicio'],
+        ]);
+
+        return response()->json(['disponibles' => AsignadorAuxiliares::disponibles($d['fecha'], $d['hora_inicio'], $d['hora_fin'])]);
     }
 
     /** GET /api/reservas/configuracion → estado del interruptor de aprobación automática */

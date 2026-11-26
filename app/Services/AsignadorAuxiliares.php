@@ -92,10 +92,30 @@ class AsignadorAuxiliares
     /** Auxiliares que ya apoyan otra reserva aprobada que se cruza con esta (no pueden estar en dos lugares) */
     public static function ocupadosEnEseHorario(Reserva $r): Collection
     {
+        return self::ocupados($r->fecha->format('Y-m-d'), $r->hora_inicio, $r->hora_fin, $r->id);
+    }
+
+    /** [auxiliar_id => i] de los que ya apoyan una reserva aprobada en esa fecha y franja */
+    public static function ocupados(string $fecha, string $ini, string $fin, ?int $ignorarReservaId = null): Collection
+    {
         return DB::table('reserva_auxiliares as ra')->join('reservas as x', 'x.id', '=', 'ra.reserva_id')
-            ->where('x.id', '<>', $r->id)->where('x.estado', 'APROBADA')->whereDate('x.fecha', $r->fecha->format('Y-m-d'))
-            ->where('x.hora_inicio', '<', $r->hora_fin)->where('x.hora_fin', '>', $r->hora_inicio)
+            ->when($ignorarReservaId, fn ($q) => $q->where('x.id', '<>', $ignorarReservaId))
+            ->where('x.estado', 'APROBADA')->whereDate('x.fecha', $fecha)
+            ->where('x.hora_inicio', '<', self::hms($fin))->where('x.hora_fin', '>', self::hms($ini))
             ->pluck('ra.auxiliar_id')->flip();
+    }
+
+    /**
+     * Cuántos auxiliares se pueden pedir para esa fecha y franja: los auxiliares activos, menos los que tienen
+     * permiso ese día y los que ya apoyan otra reserva a esa hora. Un docente no puede pedir más que esto.
+     */
+    public static function disponibles(string $fecha, string $ini, string $fin, ?int $ignorarReservaId = null): int
+    {
+        $ocupados = self::ocupados($fecha, $ini, $fin, $ignorarReservaId);
+        $conPermiso = PermisoAuxiliar::whereDate('fecha', $fecha)->pluck('auxiliar_id')->flip();
+
+        return User::whereHas('rol', fn ($q) => $q->where('codigo', 'AUX'))->where('estado', 'ACTIVO')->pluck('id')
+            ->reject(fn ($id) => isset($ocupados[$id]) || isset($conPermiso[$id]))->count();
     }
 
     public static function describir(Reserva $r): string

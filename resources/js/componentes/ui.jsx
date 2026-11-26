@@ -214,7 +214,7 @@ export function Campo({ campo, valor, onChange, error, valores = {} }) {
             {error ? (
                 <p id={`${id}-error`} className="mt-1 text-sm text-peligro" role="alert">{error}</p>
             ) : campo.ayuda ? (
-                <p id={`${id}-ayuda`} className="mt-1 text-xs text-suave">{campo.ayuda}</p>
+                <p id={`${id}-ayuda`} className="mt-1 text-xs text-suave">{typeof campo.ayuda === 'function' ? campo.ayuda(valores) : campo.ayuda}</p>
             ) : null}
         </div>
     );

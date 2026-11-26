@@ -128,6 +128,39 @@ function AccionesReserva({ fila, recargar }) {
     );
 }
 
+/** Cuántos auxiliares se pueden pedir en la fecha y horario del formulario (lo último consultado, para validar) */
+const disponiblesAux = { clave: '', n: null };
+
+function AyudaAuxiliares({ valores }) {
+    const { fecha: f, hora_inicio: ini, hora_fin: fin } = valores;
+    const clave = f && ini && fin && ini < fin ? `${f}|${ini}|${fin}` : '';
+    const [n, setN] = useState(disponiblesAux.clave === clave ? disponiblesAux.n : null);
+    useEffect(() => {
+        if (!clave) return undefined;
+        let vigente = true;
+        const t = setTimeout(() => {
+            api.get('/reservas/auxiliares-disponibles', { params: { fecha: f, hora_inicio: ini, hora_fin: fin } })
+                .then((r) => {
+                    disponiblesAux.clave = clave;
+                    disponiblesAux.n = r.data.disponibles;
+                    if (vigente) setN(r.data.disponibles);
+                })
+                .catch(() => {});
+        }, 300);
+        return () => {
+            vigente = false;
+            clearTimeout(t);
+        };
+    }, [clave]); // eslint-disable-line react-hooks/exhaustive-deps
+    return (
+        <>
+            {clave && n !== null && <strong className="text-texto">Disponibles en ese horario: {n}. </strong>}
+            {!clave && 'Elija primero la fecha y el horario para ver cuántos hay disponibles. '}
+            Se asignan solos los que tienen turno a esa hora (si pide más de 5, se asignan 4 y el resto lo asigna el Encargado).
+        </>
+    );
+}
+
 /** CU4 - El Encargado ve los auxiliares asignados a una reserva y asigna los que faltan */
 function ModalAuxiliares({ reservaId, onCerrar }) {
     const notificar = useToast();
@@ -277,7 +310,12 @@ export default function Reservas() {
                 { name: 'motivo', label: 'Motivo', tipo: 'textarea', requerido: true, min: 5, max: 200, ancho: 'completo', placeholder: 'Ej: Primer parcial INF513 grupo SA' },
                 ...(puede('reservas.pedir_auxiliares') ? [{
                     name: 'auxiliares_solicitados', label: 'Auxiliares de apoyo (opcional)', tipo: 'number', min: 0, max: 20, entero: true,
-                    ayuda: 'Ej: para cuidar un examen. Se asignan solos los auxiliares con turno a esa hora (si pide más de 5, se asignan 4 y el resto lo asigna el Encargado).',
+                    ayuda: (valores) => <AyudaAuxiliares valores={valores} />,
+                    validar: (v, valores) => {
+                        const clave = `${valores.fecha}|${valores.hora_inicio}|${valores.hora_fin}`;
+                        return Number(v) > 0 && disponiblesAux.clave === clave && Number(v) > disponiblesAux.n
+                            ? `Solo hay ${disponiblesAux.n} auxiliar(es) disponible(s) en ese horario.` : null;
+                    },
                 }] : []),
             ]}
         />
