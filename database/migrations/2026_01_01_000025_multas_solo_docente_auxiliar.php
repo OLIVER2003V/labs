@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\DB;
  * CU9 - Quién paga y quién consulta las multas:
  *  - Pagan solo Docente y Auxiliar.
  *  - El Director consulta las multas y los pagos de todos (permiso nuevo multas.ver_todas) y ya no paga.
- *  - El Encargado consulta y anula (como antes).
+ *  - El Encargado consulta y anula, y tampoco paga (pagos.pagar pasa a Encargado::EXCLUIDOS).
  *  - El Estudiante no tiene multas ni pagos.
  * Las multas PENDIENTES que tuvieran directores o estudiantes se anulan (ya no pueden pagarlas y les bloquearían las reservas).
  */
@@ -33,7 +33,7 @@ return new class extends Migration
                 ->whereIn('permiso_id', DB::table('permisos')->whereIn('codigo', ['multas.ver', 'pagos.ver', 'pagos.pagar'])->pluck('id'))->delete();
         }
         if ($rol(Encargado::ROL)) {
-            Encargado::asegurarRol(); // recibe multas.ver_todas
+            Encargado::asegurarRol(); // recibe multas.ver_todas y pierde pagos.pagar
         }
 
         $usuarios = DB::table('usuarios')->whereIn('rol_id', array_filter([$dir, $est]))->pluck('id');

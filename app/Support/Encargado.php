@@ -28,9 +28,10 @@ class Encargado
 
     /**
      * Lo que el Encargado NO maneja: los objetos encontrados los registran y entregan los auxiliares (él solo los consulta),
-     * y los turnos de los auxiliares son fijos (vienen del horario cargado; nadie los edita desde el sistema).
+     * los turnos de los auxiliares son fijos (vienen del horario cargado; nadie los edita desde el sistema),
+     * y no paga multas ni cuotas: solo pagan Docente y Auxiliar (él consulta, cobra y anula).
      */
-    const EXCLUIDOS = ['objetos.crear', 'objetos.entregar', 'turnos.crear'];
+    const EXCLUIDOS = ['objetos.crear', 'objetos.entregar', 'turnos.crear', 'pagos.pagar'];
 
     /** El rol Encargado: de sistema y con todos los permisos menos los EXCLUIDOS (los permisos nuevos también le llegan) */
     public static function asegurarRol(): int
