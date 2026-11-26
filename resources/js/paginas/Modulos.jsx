@@ -347,7 +347,7 @@ function BotonEntregar({ fila, recargar }) {
 export const Objetos = () => (
     <CrudPage
         titulo="Objetos encontrados"
-        descripcion="Objetos olvidados en los laboratorios, en custodia hasta su entrega al dueño."
+        descripcion="Objetos olvidados en los laboratorios, en custodia hasta su entrega al dueño. Los registran y los entregan los auxiliares de turno."
         endpoint="objetos"
         singular="objeto"
         permisos={{ crear: 'objetos.crear', editar: 'objetos.crear', eliminar: 'objetos.crear' }}
@@ -356,7 +356,7 @@ export const Objetos = () => (
             { key: 'fecha_hallazgo', label: 'Hallado', render: (f) => fecha(f.fecha_hallazgo) },
             { key: 'descripcion', label: 'Descripción', render: (f) => <strong>{f.descripcion}</strong> },
             { key: 'laboratorio', label: 'Laboratorio', render: (f) => f.laboratorio?.codigo },
-            { key: 'registrador', label: 'Registró', render: (f) => f.registrador?.nombre_completo },
+            { key: 'registrador', label: 'Registró (auxiliar)', render: (f) => f.registrador?.nombre_completo },
             { key: 'estado', label: 'Estado', render: (f) => <><Badge valor={f.estado} />{f.entregado_a && <span className="mt-1 block text-xs text-suave">{f.entregado_a} (CI {f.ci_receptor}) · {fechaHora(f.fecha_entrega)}</span>}</> },
         ]}
         acciones={(fila, recargar) => <BotonEntregar fila={fila} recargar={recargar} />}
