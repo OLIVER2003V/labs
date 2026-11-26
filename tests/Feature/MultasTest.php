@@ -145,4 +145,32 @@ class MultasTest extends SistemaTestCase
         $this->como('encargado@ficct.edu.bo');
         $this->getJson("/api/reportes/multas?desde={$this->martes}&hasta={$this->martes}")->assertOk()->assertJsonPath('titulo', 'Reporte de multas');
     }
+
+    public function test_solo_docente_y_auxiliar_pagan_director_consulta_y_estudiante_no_tiene_multas(): void
+    {
+        // Estudiante: sin multas ni pagos
+        $est = User::create(['codigo' => '219999001', 'nombre' => 'Ana', 'apellido' => 'Prueba', 'email' => 'ana.prueba@ficct.edu.bo',
+            'telefono' => '70000099', 'rol_id' => DB::table('roles')->where('codigo', 'EST')->value('id'), 'estado' => 'ACTIVO', 'password' => 'Clave2026']);
+        $this->como($est->email);
+        $this->getJson('/api/multas')->assertForbidden();
+        $this->getJson('/api/pagos/transacciones')->assertForbidden();
+
+        // Director: consulta las multas de todos, pero no paga ni anula
+        $multa = Multa::create(['usuario_id' => $this->id('auxiliar@ficct.edu.bo'), 'tipo' => 'ATRASO', 'monto' => 10, 'motivo' => 'Atraso de prueba',
+            'concepto_id' => DB::table('conceptos_pago')->where('codigo', 'MULTA-ATRASO')->value('id'),
+            'fecha' => today()->toDateString(), 'estado' => 'PENDIENTE', 'vence_en' => today()->addDays(7)]);
+        $this->como('director@ficct.edu.bo');
+        $ids = collect($this->getJson('/api/multas?por_pagina=100')->assertOk()->json('data'))->pluck('usuario_id');
+        $this->assertTrue($ids->contains(fn ($id) => $id !== User::where('email', 'director@ficct.edu.bo')->value('id')));
+        $this->postJson('/api/pagos/stripe', ['multa_id' => $multa->id])->assertForbidden();
+        $this->putJson("/api/multas/{$multa->id}/anular", ['observacion' => 'No corresponde'])->assertForbidden();
+
+        // Una reserva del Director o del Estudiante que no se usa no genera multa
+        foreach (['director@ficct.edu.bo', $est->email] as $email) {
+            $r = Reserva::create(['laboratorio_id' => Laboratorio::value('id'), 'solicitante_id' => User::where('email', $email)->value('id'),
+                'fecha' => $this->martes, 'hora_inicio' => '07:00', 'hora_fin' => '07:30', 'tipo' => 'CONFERENCIA', 'motivo' => 'Prueba', 'estado' => 'APROBADA']);
+            $this->assertNull(\App\Services\Multas::porReservaNoUtilizada($r));
+            $r->delete();
+        }
+    }
 }

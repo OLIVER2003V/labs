@@ -33,13 +33,13 @@ class RegistroEstudianteTest extends SistemaTestCase
         $this->assertSame('ACTIVO', $u->fresh()->estado);
         $this->assertSame($enc->id, $u->fresh()->aprobado_por);
 
-        // Ya entra, con acceso a laboratorios, disponibilidad, sus reservas y (CU9) sus multas y pagos
+        // Ya entra, con acceso a laboratorios, disponibilidad y sus reservas (CU9: el estudiante no tiene multas ni pagos)
         $this->postJson('/api/login', ['email' => 'lucia.paz@ficct.edu.bo', 'password' => 'Clave2026'])->assertOk();
         $this->como('lucia.paz@ficct.edu.bo');
         $rutas = collect($this->getJson('/api/me')->json('menu'))->pluck('ruta')->all();
-        $this->assertEqualsCanonicalizing(['/', '/disponibilidad', '/reservas', '/laboratorios', '/pagos', '/multas'], $rutas);
+        $this->assertEqualsCanonicalizing(['/', '/disponibilidad', '/reservas', '/laboratorios'], $rutas);
         $this->getJson('/api/reservas')->assertOk();
-        $this->getJson('/api/multas')->assertOk();
+        $this->getJson('/api/multas')->assertStatus(403);
         $this->getJson('/api/equipos')->assertStatus(403);
         $this->getJson('/api/reportes/reservas')->assertStatus(403);
         $this->putJson('/api/multas/1/anular', ['observacion' => 'no debería poder'])->assertStatus(403);

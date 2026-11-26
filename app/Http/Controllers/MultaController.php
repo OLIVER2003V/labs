@@ -30,7 +30,7 @@ class MultaController extends CrudController
 
     protected function consulta(Builder $query, Request $request): Builder
     {
-        if (! $request->user()->tienePermiso('multas.gestionar')) {
+        if (! self::veTodas($request->user())) {
             $query->where('usuario_id', $request->user()->id);
         }
         if ($request->boolean('vencidas')) {
@@ -44,7 +44,7 @@ class MultaController extends CrudController
     public function resumen(Request $request): JsonResponse
     {
         $yo = $request->user();
-        $todas = $yo->tienePermiso('multas.gestionar');
+        $todas = self::veTodas($yo);
         $q = fn () => Multa::when(! $todas, fn ($x) => $x->where('usuario_id', $yo->id));
         [$nVencidas, $montoVencido] = Multas::vencidas($yo->id);
 
@@ -58,6 +58,12 @@ class MultaController extends CrudController
             'dias_plazo' => Multas::diasDePlazo(),
             'montos' => collect(Multas::CONCEPTO)->map(fn ($codigo) => ConceptoPago::where('codigo', $codigo)->first(['monto', 'activo'])),
         ]);
+    }
+
+    /** El Encargado (gestiona) y el Director (solo consulta) ven las multas de todos; Docente y Auxiliar, las suyas */
+    private static function veTodas($usuario): bool
+    {
+        return $usuario->tienePermiso('multas.gestionar') || $usuario->tienePermiso('multas.ver_todas');
     }
 
     /** PUT /api/multas/{id}/anular  { observacion } → el Encargado la anula (ej: el auxiliar presentó una justificación) */

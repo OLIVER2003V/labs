@@ -335,7 +335,7 @@ class DatosSeeder extends Seeder
 
         $planes = [
             ['docente@ficct.edu.bo', 'CURSO-LARAVEL', 'Curso de Laravel + React (cuotas)', 600, 3, 2],
-            ['director@ficct.edu.bo', 'CERT-CURSO', 'Certificados del curso de Docker (15)', 1200, 4, 1],
+            ['lgutierrez@ficct.edu.bo', 'CERT-CURSO', 'Certificados del curso de Docker (15)', 1200, 4, 1],
             ['auxiliar@ficct.edu.bo', 'CURSO-LARAVEL', 'Curso de Laravel + React - cohorte noviembre', 450, 3, 3],
             ['jsuarez@ficct.edu.bo', 'REPO-CRED', 'Reposición de credencial', 25, 1, 0],
             ['panez@ficct.edu.bo', 'CERT-CURSO', 'Certificados del curso de Docker (2)', 160, 2, 1],
@@ -374,7 +374,7 @@ class DatosSeeder extends Seeder
 
         // Pagos únicos repartidos en el último mes (para el gráfico de ingresos)
         $unicos = [['CERT-CURSO', 'panez@ficct.edu.bo'], ['REPO-CRED', 'auxiliar@ficct.edu.bo'], ['REPO-CRED', 'docente@ficct.edu.bo'],
-            ['CURSO-LARAVEL', 'director@ficct.edu.bo'], ['CERT-CURSO', 'jsuarez@ficct.edu.bo'], ['CURSO-LARAVEL', 'panez@ficct.edu.bo']];
+            ['CURSO-LARAVEL', 'lgutierrez@ficct.edu.bo'], ['CERT-CURSO', 'jsuarez@ficct.edu.bo'], ['CURSO-LARAVEL', 'panez@ficct.edu.bo']];
         for ($i = 0; $i < 16; $i++) {
             [$con, $email] = $unicos[$i % count($unicos)];
             $fecha = now()->subDays(mt_rand(0, 29))->setTime(mt_rand(8, 21), mt_rand(0, 59));

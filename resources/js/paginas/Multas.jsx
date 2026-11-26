@@ -69,6 +69,7 @@ function AccionesMulta({ fila, recargar, onPagar }) {
 export default function Multas() {
     const { puede, usuario } = useAuth();
     const gestiona = puede('multas.gestionar');
+    const verTodas = gestiona || puede('multas.ver_todas'); // el Director consulta todas pero no anula
     const [resumen, setResumen] = useState(null);
     const [pago, setPago] = useState(null);
     const [recargar, setRecargar] = useState(0);
@@ -96,21 +97,21 @@ export default function Multas() {
             )}
             {resumen && (
                 <div className="mb-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                    {tarjeta(gestiona ? 'Multas pendientes (todos)' : 'Mis multas pendientes', `${resumen.pendientes} · ${bs(resumen.monto_pendiente)}`, 'border-l-alerta')}
+                    {tarjeta(verTodas ? 'Multas pendientes (todos)' : 'Mis multas pendientes', `${resumen.pendientes} · ${bs(resumen.monto_pendiente)}`, 'border-l-alerta')}
                     {tarjeta('Vencidas', resumen.vencidas, resumen.vencidas ? 'border-l-peligro' : '')}
-                    {tarjeta(gestiona ? 'Cobrado' : 'Pagado', bs(resumen.monto_pagado), 'border-l-exito')}
+                    {tarjeta(verTodas ? 'Cobrado' : 'Pagado', bs(resumen.monto_pagado), 'border-l-exito')}
                     {tarjeta('Montos vigentes', [m.ATRASO && `Atraso ${bs(m.ATRASO.monto)}`, m.FALTA && `Falta ${bs(m.FALTA.monto)}`, m.RESERVA && `Reserva ${bs(m.RESERVA.monto)}`].filter(Boolean).join(' · '))}
                 </div>
             )}
 
             <CrudPage
                 titulo="Multas"
-                descripcion={gestiona
-                    ? <>Se generan solas por atraso o falta de un auxiliar y por reservas no utilizadas. Plazo de pago: {resumen?.dias_plazo ?? 7} días. Los montos se cambian en <Link to="/pagos/conceptos" className="font-semibold text-primario underline">Conceptos de cobro</Link> (MULTA-ATRASO, MULTA-FALTA, MULTA-RESERVA).</>
+                descripcion={verTodas
+                    ? <>Se generan solas por atraso o falta de un auxiliar y por reservas no utilizadas de docentes y auxiliares. Plazo de pago: {resumen?.dias_plazo ?? 7} días.{gestiona && <> Los montos se cambian en <Link to="/pagos/conceptos" className="font-semibold text-primario underline">Conceptos de cobro</Link> (MULTA-ATRASO, MULTA-FALTA, MULTA-RESERVA).</>}</>
                     : `Pague sus multas con tarjeta (Stripe). Tiene ${resumen?.dias_plazo ?? 7} días desde que se generan; si vencen, no podrá solicitar reservas ni permutas.`}
                 endpoint="multas"
                 singular="multa" femenino
-                aviso={resumen && !gestiona && resumen.pendientes > 0
+                aviso={resumen && !verTodas && resumen.pendientes > 0
                     ? { texto: `Tiene ${resumen.pendientes} multa(s) por pagar (${bs(resumen.monto_pendiente)}).${resumen.vencidas ? ` ${resumen.vencidas} ya venció(eron).` : ''}`, filtro: { estado: 'PENDIENTE' } }
                     : null}
                 resaltar={(f) => (f.estado === 'PENDIENTE' && f.usuario_id === usuario.id ? (f.vencida ? 'Vencida: páguela' : 'Por pagar') : null)}
@@ -121,7 +122,7 @@ export default function Multas() {
                 ]}
                 columnas={[
                     { key: 'fecha', label: 'Fecha', render: (f) => <><strong>{fecha(f.fecha)}</strong><span className="block text-xs text-suave">{TIPO[f.tipo]}</span></> },
-                    ...(gestiona ? [{ key: 'usuario', label: 'Usuario', render: (f) => f.usuario?.nombre_completo }] : []),
+                    ...(verTodas ? [{ key: 'usuario', label: 'Usuario', render: (f) => f.usuario?.nombre_completo }] : []),
                     { key: 'motivo', label: 'Motivo' },
                     { key: 'monto', label: 'Monto', render: (f) => <strong>{bs(f.monto)}</strong> },
                     {

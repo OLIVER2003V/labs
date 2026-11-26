@@ -15,6 +15,7 @@ use Illuminate\Support\Collection;
  *   ATRASO   → al marcar entrada entre los 11 y 30 min (CU7)                → MULTA-ATRASO  (Bs 10 por defecto)
  *   FALTA    → al registrarse la falta automática a los 30 min (CU7)        → MULTA-FALTA   (Bs 50 por defecto)
  *   RESERVA  → cuando el auxiliar/Encargado registra que no se utilizó (CU4) → MULTA-RESERVA (Bs 20 por defecto)
+ *              solo a quien puede pagar (Docente y Auxiliar): Director y Estudiante no reciben multas
  *
  * El monto sale del concepto de cobro (el Encargado lo cambia en "Conceptos de cobro"; si lo desactiva, ese tipo ya no se multa).
  * Plazo para pagar: PAGOS_DIAS_MULTA días (7 por defecto). Pasado el plazo la multa está VENCIDA y el usuario
@@ -43,8 +44,8 @@ class Multas
     public static function porReservaNoUtilizada(Reserva $r): ?Multa
     {
         $r->loadMissing(['laboratorio', 'solicitante']);
-        // Quien aprueba reservas (Encargado) no se multa a sí mismo
-        if ($r->solicitante?->tienePermiso('reservas.aprobar')) {
+        // Solo pagan multas Docente y Auxiliar: el Director y el Estudiante no se multan, y el Encargado no se multa a sí mismo
+        if (! $r->solicitante?->tienePermiso('pagos.pagar') || $r->solicitante->tienePermiso('reservas.aprobar')) {
             return null;
         }
         $motivo = "Reserva #{$r->id} del {$r->laboratorio->codigo} el ".$r->fecha->format('d/m/Y').' de '.substr($r->hora_inicio, 0, 5)

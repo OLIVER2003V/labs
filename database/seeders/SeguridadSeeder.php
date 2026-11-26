@@ -33,7 +33,7 @@ class SeguridadSeeder extends Seeder
         'asistencia' => ['ver' => 'Ver asistencia', 'marcar' => 'Marcar entrada y salida', 'gestionar' => 'Registrar permisos y faltas, ver toda la asistencia'],
         'pagos' => ['ver' => 'Ver sus pagos y planes', 'pagar' => 'Pagar con tarjeta (Stripe) cuotas, multas y conceptos', 'ver_todos' => 'Ver transacciones de todos'],
         'planes' => ['gestionar' => 'Crear y anular planes de pago'],
-        'multas' => ['ver' => 'Ver y pagar sus multas', 'gestionar' => 'Ver las multas de todos y anularlas'],
+        'multas' => ['ver' => 'Ver y pagar sus multas', 'ver_todas' => 'Consultar las multas de todos (sin anular)', 'gestionar' => 'Ver las multas de todos y anularlas'],
         'conceptos' => ['crear' => 'Registrar conceptos de cobro', 'editar' => 'Modificar conceptos de cobro', 'eliminar' => 'Eliminar conceptos de cobro'],
     ];
 
@@ -54,9 +54,10 @@ class SeguridadSeeder extends Seeder
             'equipos.ver', 'incidencias.ver', 'incidencias.crear', 'objetos.*', 'turnos.ver', 'asistencia.ver',
             'asistencia.marcar', 'pagos.ver', 'pagos.pagar', 'permutas.ver', 'permutas.solicitar', 'mensajes.usar', 'multas.ver', 'reservas.registrar_uso'],
         // Se registra solo desde el login; el Encargado aprueba la cuenta
-        'EST' => ['laboratorios.ver', 'disponibilidad.ver', 'reservas.ver', 'reservas.crear', 'reservas.cancelar', 'multas.ver', 'pagos.ver', 'pagos.pagar'],
+        // Multas y pagos: solo pagan Docente y Auxiliar; el Director y el Encargado consultan; el Estudiante no tiene multas
+        'EST' => ['laboratorios.ver', 'disponibilidad.ver', 'reservas.ver', 'reservas.crear', 'reservas.cancelar'],
         'DIR' => ['dashboard.ver', 'reportes.ver', 'laboratorios.ver', 'horarios.ver', 'disponibilidad.ver', 'reservas.ver', 'reservas.ver_todas',
-            'reservas.crear', 'reservas.cancelar', 'equipos.ver', 'incidencias.ver', 'pagos.ver', 'pagos.pagar', 'pagos.ver_todos', 'multas.ver', 'reservas.pedir_auxiliares'],
+            'reservas.crear', 'reservas.cancelar', 'equipos.ver', 'incidencias.ver', 'pagos.ver', 'pagos.ver_todos', 'multas.ver', 'multas.ver_todas', 'reservas.pedir_auxiliares'],
     ];
 
     /** grupo, título, ruta React, ícono (lucide), permiso requerido */
