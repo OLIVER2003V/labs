@@ -295,7 +295,7 @@ export const Incidencias = () => (
         ]}
         aFormulario={(f) => ({ estado: f.estado, solucion: f.solucion ?? '' })}
         campos={[
-            { name: 'equipo_id', label: 'Equipo', tipo: 'select', opciones: 'equipos', requerido: true, soloCrear: true, ancho: 'completo' },
+            { name: 'equipo_id', label: 'Equipo', tipo: 'select', opciones: 'equipos', buscable: true, requerido: true, soloCrear: true, ancho: 'completo' },
             { name: 'descripcion', label: 'Descripción de la falla', tipo: 'textarea', requerido: true, min: 10, max: 300, soloCrear: true, ancho: 'completo' },
             { name: 'estado', label: 'Estado', tipo: 'select', opciones: ['PENDIENTE', 'EN_ATENCION', 'RESUELTA'], requerido: true, soloEditar: true },
             { name: 'solucion', label: 'Solución aplicada', tipo: 'textarea', min: 5, max: 300, soloEditar: true, ancho: 'completo', requerido: (v) => v.estado === 'RESUELTA' },

@@ -84,27 +84,41 @@ function BuscadorGlobal() {
     const [abierto, setAbierto] = useState(false);
     const [activo, setActivo] = useState(-1);
     const [buscando, setBuscando] = useState(false);
+    const [fallo, setFallo] = useState(false);
     const navegar = useNavigate();
     const ref = useRef(null);
+    const texto = q.trim().replace(/\s+/g, ' ');
 
     useEffect(() => {
-        if (q.trim().length < 2) {
+        if (texto.length < 2) {
             setRes([]);
+            setBuscando(false);
             return;
         }
         setBuscando(true);
+        setFallo(false);
+        // Si se sigue escribiendo, la petición anterior se cancela: así nunca se muestran resultados viejos
+        const control = new AbortController();
         const t = setTimeout(() => {
-            api.get('/buscar', { params: { q } })
+            api.get('/buscar', { params: { q: texto }, signal: control.signal })
                 .then((r) => {
-                    setRes(r.data);
+                    setRes(Array.isArray(r.data) ? r.data : []);
                     setAbierto(true);
                     setActivo(-1);
+                    setBuscando(false);
                 })
-                .catch(() => setRes([]))
-                .finally(() => setBuscando(false));
+                .catch((e) => {
+                    if (e?.code === 'ERR_CANCELED' || control.signal.aborted) return; // cancelada a propósito
+                    setRes([]);
+                    setFallo(true);
+                    setBuscando(false);
+                });
         }, 300);
-        return () => clearTimeout(t);
-    }, [q]);
+        return () => {
+            clearTimeout(t);
+            control.abort();
+        };
+    }, [texto]);
 
     useEffect(() => {
         const fuera = (e) => !ref.current?.contains(e.target) && setAbierto(false);
@@ -124,27 +138,41 @@ function BuscadorGlobal() {
             <input
                 type="search"
                 className="campo rounded-full pl-9"
-                placeholder={angosto ? 'Buscar…' : 'Buscar laboratorios, equipos, materias, reservas…'}
+                placeholder={angosto ? 'Buscar…' : 'Buscar páginas, equipos, reservas, incidencias, usuarios…'}
                 aria-label="Búsqueda global"
                 aria-expanded={abierto}
                 aria-controls="resultados-busqueda"
+                aria-activedescendant={activo >= 0 ? `resultado-${activo}` : undefined}
+                aria-autocomplete="list"
                 role="combobox"
+                maxLength={50}
                 value={q}
-                onChange={(e) => setQ(e.target.value)}
+                onChange={(e) => {
+                    setQ(e.target.value);
+                    setAbierto(true);
+                }}
                 onFocus={() => res.length && setAbierto(true)}
                 onKeyDown={(e) => {
-                    if (e.key === 'ArrowDown') setActivo((a) => Math.min(a + 1, res.length - 1));
-                    else if (e.key === 'ArrowUp') setActivo((a) => Math.max(a - 1, 0));
-                    else if (e.key === 'Enter' && res[activo]) ir(res[activo]);
-                    else if (e.key === 'Escape') setAbierto(false);
+                    if (e.key === 'ArrowDown') {
+                        e.preventDefault();
+                        setAbierto(true);
+                        setActivo((a) => Math.min(a + 1, res.length - 1));
+                    } else if (e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        setActivo((a) => Math.max(a - 1, 0));
+                    } else if (e.key === 'Enter' && !buscando && res.length) {
+                        e.preventDefault();
+                        ir(res[activo] ?? res[0]); // sin elegir con flechas, Enter abre el primero
+                    } else if (e.key === 'Escape') setAbierto(false);
                 }}
             />
-            {abierto && q.length >= 2 && (
+            {abierto && texto.length >= 2 && (
                 <ul id="resultados-busqueda" role="listbox" className="tarjeta absolute top-full right-0 left-0 z-40 mt-2 max-h-96 overflow-y-auto p-1 shadow-xl">
-                    {buscando && !res.length && <li className="p-3 text-sm text-suave">Buscando…</li>}
-                    {!buscando && !res.length && <li className="p-3 text-sm text-suave">Sin resultados para “{q}”.</li>}
+                    {buscando && <li className="p-3 text-sm text-suave">Buscando…</li>}
+                    {!buscando && fallo && <li className="p-3 text-sm text-peligro">No se pudo buscar. Revise su conexión e intente de nuevo.</li>}
+                    {!buscando && !fallo && !res.length && <li className="p-3 text-sm text-suave">Sin resultados para “{texto}”.</li>}
                     {res.map((r, i) => (
-                        <li key={i} role="option" aria-selected={i === activo}>
+                        <li key={`${r.tipo}-${r.ruta}-${i}`} id={`resultado-${i}`} role="option" aria-selected={i === activo}>
                             <button
                                 className={`flex w-full items-start gap-3 rounded-tema p-2 text-left ${i === activo ? 'bg-primario-tenue' : 'hover:bg-superficie-2'}`}
                                 onClick={() => ir(r)}

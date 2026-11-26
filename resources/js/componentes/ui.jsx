@@ -134,6 +134,7 @@ export function useOpciones(tipo) {
 export function Campo({ campo, valor, onChange, error, valores = {} }) {
     const id = useId();
     const remotas = useOpciones(typeof campo.opciones === 'string' ? campo.opciones : null);
+    const [filtro, setFiltro] = useState(''); // texto del buscador de los select largos
     // tipo 'seccion': solo un subtítulo que agrupa los campos siguientes (no es un dato). Va después de los hooks.
     if (campo.tipo === 'seccion') {
         return <h3 className="mt-2 border-t border-borde pt-4 text-sm font-semibold tracking-wide text-suave uppercase sm:col-span-2">{campo.label}</h3>;
@@ -151,14 +152,47 @@ export function Campo({ campo, valor, onChange, error, valores = {} }) {
 
     let control;
     if (campo.tipo === 'select') {
+        // Buscador: se muestra si el campo lo pide (buscable: true) o si la lista es larga (más de 10 opciones).
+        // Ignora mayúsculas y tildes. La opción ya elegida siempre se conserva aunque no coincida con el filtro.
+        const buscable = campo.buscable ?? opciones.length > 10;
+        const normalizar = (t) => String(t ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+        const pares = opciones.map((o) => (typeof o === 'object' ? [o.id ?? o.value, o.label] : [o, o]));
+        const palabras = normalizar(filtro).split(/\s+/).filter(Boolean);
+        const visibles = buscable && palabras.length
+            ? pares.filter(([v, l]) => String(v) === String(valor) || palabras.every((p) => normalizar(l).includes(p)))
+            : pares;
         control = (
-            <select {...comunes} className={clase} value={valor ?? ''} onChange={(e) => onChange(e.target.value)}>
-                <option value="">— Seleccione —</option>
-                {opciones.map((o) => {
-                    const [v, l] = typeof o === 'object' ? [o.id ?? o.value, o.label] : [o, o];
-                    return <option key={v} value={v}>{l}</option>;
-                })}
-            </select>
+            <>
+                {buscable && (
+                    <input
+                        type="search"
+                        className="campo mb-2"
+                        placeholder="Buscar… (ej: PC-05, LAB-41)"
+                        aria-label={`Buscar ${campo.label ?? ''}`}
+                        value={filtro}
+                        disabled={comunes.disabled}
+                        onChange={(e) => {
+                            setFiltro(e.target.value);
+                            // si el filtro deja un solo resultado, se elige automáticamente
+                            const q = normalizar(e.target.value).split(/\s+/).filter(Boolean);
+                            const r = q.length ? pares.filter(([, l]) => q.every((p) => normalizar(l).includes(p))) : [];
+                            if (r.length === 1) onChange(String(r[0][0]));
+                        }}
+                        onKeyDown={(e) => {
+                            // Enter elige el primer resultado en vez de enviar el formulario
+                            if (e.key === 'Enter') {
+                                e.preventDefault();
+                                const primero = visibles.find(([v]) => String(v) !== String(valor)) ?? visibles[0];
+                                if (primero) onChange(String(primero[0]));
+                            }
+                        }}
+                    />
+                )}
+                <select {...comunes} className={clase} value={valor ?? ''} onChange={(e) => onChange(e.target.value)}>
+                    <option value="">{buscable && palabras.length ? `— ${visibles.length} resultado(s) —` : '— Seleccione —'}</option>
+                    {visibles.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                </select>
+            </>
         );
     } else if (campo.tipo === 'imagen') {
         // Foto: en el celular abre la cámara (capture). Vista previa de la elegida o de la actual (campo.actual(valores))

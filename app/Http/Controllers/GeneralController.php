@@ -4,12 +4,17 @@ namespace App\Http\Controllers;
 
 use App\Models\ConceptoPago;
 use App\Models\Equipo;
+use App\Models\Incidencia;
 use App\Models\Laboratorio;
 use App\Models\Materia;
+use App\Models\Menu;
+use App\Models\Multa;
+use App\Models\ObjetoEncontrado;
 use App\Models\Reserva;
 use App\Models\Semestre;
 use App\Models\Turno;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -20,49 +25,162 @@ use Illuminate\Validation\Rule;
  */
 class GeneralController extends Controller
 {
+    /** Máximo de resultados por cada tipo (laboratorios, equipos, ...) */
+    private const POR_TIPO = 5;
+
     /**
      * Búsqueda global (barra del encabezado). Solo busca en los recursos que el usuario puede ver.
-     * GET /api/buscar?q=lab
+     * GET /api/buscar?q=lab 41
+     *
+     * - Varias palabras: cada palabra debe aparecer en alguna de las columnas ("lab-41 pc-05", "pc-05 41").
+     * - No distingue mayúsculas ni tildes ("informatica" encuentra "Informática").
+     * - Los caracteres % y _ se buscan literalmente (no son comodines).
+     * - Primero salen los que EMPIEZAN con lo buscado.
+     * - Si una sección falla, las demás igual responden.
      */
     public function buscar(Request $request): JsonResponse
     {
-        $request->validate(['q' => ['required', 'string', 'min:2', 'max:50']]);
-        $q = '%'.trim($request->q).'%';
+        $texto = trim(preg_replace('/\s+/u', ' ', (string) $request->query('q', '')));
+        if (mb_strlen($texto) < 2) {
+            return response()->json([]);
+        }
+        $texto = mb_substr($texto, 0, 50);
+        $palabras = array_slice(array_unique(explode(' ', self::sinTildes($texto))), 0, 5); // máximo 5 palabras
         $u = $request->user();
         $res = [];
 
-        if ($u->tienePermiso('laboratorios.ver')) {
-            foreach (Laboratorio::where('codigo', 'ILIKE', $q)->orWhere('nombre', 'ILIKE', $q)->limit(5)->get() as $l) {
-                $res[] = ['tipo' => 'Laboratorio', 'titulo' => "{$l->codigo} - {$l->nombre}", 'detalle' => "{$l->estado} · {$l->capacidad} equipos", 'ruta' => '/laboratorios?q='.urlencode($l->codigo)];
+        // Ejecuta una sección; si algo falla se registra en el log y se sigue con las demás
+        $seccion = function (string $permiso, callable $buscar) use ($u, &$res) {
+            if (! $u->tienePermiso($permiso)) {
+                return;
             }
-        }
-        if ($u->tienePermiso('equipos.ver')) {
-            foreach (Equipo::with('laboratorio')->where('codigo', 'ILIKE', $q)->orWhere('descripcion', 'ILIKE', $q)->limit(5)->get() as $e) {
-                $res[] = ['tipo' => 'Equipo', 'titulo' => "{$e->codigo} - {$e->descripcion}", 'detalle' => "{$e->laboratorio?->codigo} · {$e->estado}", 'ruta' => '/equipos?q='.urlencode($e->codigo)];
+            try {
+                array_push($res, ...$buscar());
+            } catch (\Throwable $e) {
+                report($e);
             }
-        }
-        if ($u->tienePermiso('horarios.ver')) {
-            foreach (Materia::where('sigla', 'ILIKE', $q)->orWhere('nombre', 'ILIKE', $q)->limit(5)->get() as $m) {
-                $res[] = ['tipo' => 'Materia', 'titulo' => "{$m->sigla} - {$m->nombre}", 'detalle' => 'Ver horario', 'ruta' => '/horarios?q='.urlencode($m->sigla)];
+        };
+
+        // Páginas del menú: escribir "asis" lleva a Asistencia
+        // (cada página tiene su propio permiso, por eso no usa $seccion)
+        try {
+            $paginas = Menu::where('activo', true)->orderBy('orden')->get()
+                ->filter(fn ($m) => ! $m->permiso_codigo || $u->tienePermiso($m->permiso_codigo))
+                ->filter(fn ($m) => collect($palabras)->every(fn ($p) => str_contains(self::sinTildes("{$m->titulo} {$m->grupo}"), $p)))
+                ->take(self::POR_TIPO);
+            foreach ($paginas as $m) {
+                $res[] = ['tipo' => 'Página', 'titulo' => $m->titulo, 'detalle' => $m->grupo, 'ruta' => $m->ruta];
             }
-        }
-        if ($u->tienePermiso('reservas.ver')) {
-            $reservas = Reserva::with('laboratorio')->where('motivo', 'ILIKE', $q)
-                ->when(! $u->tienePermiso('reservas.ver_todas'), fn ($x) => $x->where('solicitante_id', $u->id))
-                ->orderByDesc('fecha')->limit(5)->get();
-            foreach ($reservas as $r) {
-                $res[] = ['tipo' => 'Reserva', 'titulo' => $r->motivo, 'detalle' => "{$r->laboratorio->codigo} · {$r->fecha->format('d/m/Y')} · {$r->estado}", 'ruta' => '/reservas?q='.urlencode($r->motivo)];
-            }
-        }
-        if ($u->tienePermiso('usuarios.ver')) {
-            $usuarios = User::where(fn ($x) => $x->where('nombre', 'ILIKE', $q)->orWhere('apellido', 'ILIKE', $q)
-                ->orWhere('email', 'ILIKE', $q)->orWhere('codigo', 'ILIKE', $q))->limit(5)->get();
-            foreach ($usuarios as $x) {
-                $res[] = ['tipo' => 'Usuario', 'titulo' => $x->nombre_completo, 'detalle' => $x->email, 'ruta' => '/usuarios?q='.urlencode($x->email)];
-            }
+        } catch (\Throwable $e) {
+            report($e);
         }
 
+        $seccion('laboratorios.ver', fn () => $this->filtrar(Laboratorio::query(), ['codigo', 'nombre', 'ubicacion'], $palabras)
+            ->get()->map(fn ($l) => [
+                'tipo' => 'Laboratorio', 'titulo' => "{$l->codigo} - {$l->nombre}",
+                'detalle' => "{$l->estado} · {$l->capacidad} equipos", 'ruta' => '/laboratorios?q='.urlencode($l->codigo),
+            ])->all());
+
+        $seccion('equipos.ver', fn () => $this->filtrar(Equipo::with('laboratorio'),
+            ['codigo', 'activo_fijo', 'descripcion', 'tipo', 'laboratorio.codigo', 'red.ip'], $palabras)
+            ->get()->map(fn ($e) => [
+                'tipo' => 'Equipo', 'titulo' => "{$e->codigo} - {$e->descripcion}",
+                'detalle' => "{$e->laboratorio?->codigo} · {$e->estado}", 'ruta' => '/equipos?q='.urlencode($e->codigo),
+            ])->all());
+
+        $seccion('horarios.ver', fn () => $this->filtrar(Materia::query(), ['sigla', 'nombre'], $palabras)
+            ->get()->map(fn ($m) => [
+                'tipo' => 'Materia', 'titulo' => "{$m->sigla} - {$m->nombre}",
+                'detalle' => 'Ver horario', 'ruta' => '/horarios?q='.urlencode($m->sigla),
+            ])->all());
+
+        $seccion('reservas.ver', fn () => $this->filtrar(Reserva::with('laboratorio')
+            ->when(! $u->tienePermiso('reservas.ver_todas'), fn ($x) => $x->where('solicitante_id', $u->id)),
+            ['motivo', 'laboratorio.codigo', 'solicitante.nombre', 'solicitante.apellido'], $palabras, 'fecha')
+            ->get()->map(fn ($r) => [
+                'tipo' => 'Reserva', 'titulo' => $r->motivo,
+                'detalle' => "{$r->laboratorio?->codigo} · {$r->fecha?->format('d/m/Y')} · {$r->estado}",
+                'ruta' => '/reservas?q='.urlencode($r->motivo),
+            ])->all());
+
+        $seccion('incidencias.ver', fn () => $this->filtrar(Incidencia::with('equipo')
+            ->when(! $u->tienePermiso('incidencias.gestionar'), fn ($x) => $x->where('reportado_por', $u->id)),
+            ['descripcion', 'equipo.codigo', 'equipo.laboratorio.codigo'], $palabras, 'created_at')
+            ->get()->map(fn ($i) => [
+                'tipo' => 'Incidencia', 'titulo' => "#{$i->id} - ".mb_strimwidth($i->descripcion, 0, 70, '…'),
+                'detalle' => "{$i->equipo?->codigo} · {$i->estado}",
+                'ruta' => '/incidencias?q='.urlencode(mb_substr($i->descripcion, 0, 40)),
+            ])->all());
+
+        $seccion('objetos.ver', fn () => $this->filtrar(ObjetoEncontrado::with('laboratorio'),
+            ['descripcion', 'entregado_a', 'laboratorio.codigo'], $palabras, 'fecha_hallazgo')
+            ->get()->map(fn ($o) => [
+                'tipo' => 'Objeto', 'titulo' => mb_strimwidth($o->descripcion, 0, 70, '…'),
+                'detalle' => "{$o->laboratorio?->codigo} · {$o->fecha_hallazgo?->format('d/m/Y')} · {$o->estado}",
+                'ruta' => '/objetos?q='.urlencode(mb_substr($o->descripcion, 0, 40)),
+            ])->all());
+
+        $seccion('multas.ver', fn () => $this->filtrar(Multa::with('usuario')
+            ->when(! $u->tienePermiso('multas.gestionar') && ! $u->tienePermiso('multas.ver_todas'), fn ($x) => $x->where('usuario_id', $u->id)),
+            ['motivo', 'usuario.nombre', 'usuario.apellido'], $palabras, 'fecha')
+            ->get()->map(fn ($m) => [
+                'tipo' => 'Multa', 'titulo' => mb_strimwidth((string) $m->motivo, 0, 70, '…'),
+                'detalle' => "{$m->usuario?->nombre_completo} · Bs {$m->monto} · {$m->estado}",
+                'ruta' => '/multas?q='.urlencode(mb_substr((string) $m->motivo, 0, 40)),
+            ])->all());
+
+        $seccion('usuarios.ver', fn () => $this->filtrar(User::query(), ['codigo', 'nombre', 'apellido', 'email'], $palabras)
+            ->get()->map(fn ($x) => [
+                'tipo' => 'Usuario', 'titulo' => $x->nombre_completo,
+                'detalle' => $x->email, 'ruta' => '/usuarios?q='.urlencode($x->email),
+            ])->all());
+
         return response()->json($res);
+    }
+
+    /**
+     * Aplica la búsqueda a una consulta: cada palabra debe estar en alguna columna (Y entre palabras, O entre columnas).
+     * Columnas con punto buscan en una relación: 'equipo.laboratorio.codigo'.
+     * Ordena primero los que empiezan con la primera palabra (en la primera columna) y luego por $recientes (desc).
+     * Las columnas las escribe el programador (nunca vienen del usuario), por eso pueden ir dentro del SQL.
+     */
+    private function filtrar(Builder $query, array $columnas, array $palabras, ?string $recientes = null): Builder
+    {
+        $sql = fn (string $col) => "translate(CAST($col AS TEXT), 'ÁÉÍÓÚÜáéíóúü', 'AEIOUUaeiouu') ILIKE ?";
+        foreach ($palabras as $p) {
+            $patron = '%'.self::escaparLike($p).'%';
+            $query->where(function (Builder $q) use ($query, $columnas, $patron, $sql) {
+                foreach ($columnas as $c) {
+                    if (str_contains($c, '.')) {
+                        $rel = substr($c, 0, strrpos($c, '.'));
+                        $col = substr($c, strrpos($c, '.') + 1);
+                        $q->orWhereHas($rel, fn ($r) => $r->whereRaw($sql($col), [$patron]));
+                    } else {
+                        $q->orWhereRaw($sql($query->qualifyColumn($c)), [$patron]);
+                    }
+                }
+            });
+        }
+        $primera = $query->qualifyColumn($columnas[0]);
+        $query->orderByRaw("CASE WHEN {$sql($primera)} THEN 0 ELSE 1 END", [self::escaparLike($palabras[0]).'%']);
+        if ($recientes) {
+            $query->orderByDesc($query->qualifyColumn($recientes));
+        }
+
+        return $query->orderBy($query->qualifyColumn($columnas[0]))->limit(self::POR_TIPO);
+    }
+
+    /** "Informática" → "informatica" (para comparar sin tildes ni mayúsculas) */
+    private static function sinTildes(string $t): string
+    {
+        return mb_strtolower(strtr($t, ['Á' => 'A', 'É' => 'E', 'Í' => 'I', 'Ó' => 'O', 'Ú' => 'U', 'Ü' => 'U',
+            'á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u', 'ü' => 'u']));
+    }
+
+    /** Para LIKE/ILIKE: % y _ se buscan como texto, no como comodines */
+    private static function escaparLike(string $t): string
+    {
+        return str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $t);
     }
 
     /**

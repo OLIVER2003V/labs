@@ -17,7 +17,7 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class RegistrarBitacora
 {
-    const CONSULTAS_AUTOMATICAS = ['notificaciones', 'mensajes'];
+    const CONSULTAS_AUTOMATICAS = ['notificaciones', 'mensajes', 'buscar']; // 'buscar' se dispara mientras se escribe
 
     public function handle(Request $request, Closure $next): Response
     {
