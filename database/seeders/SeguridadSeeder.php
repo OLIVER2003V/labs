@@ -43,7 +43,7 @@ class SeguridadSeeder extends Seeder
         ['DOC', 'Docente', 'Solicita reservas, consulta disponibilidad y reporta incidencias', false],
         ['AUX', 'Auxiliar', 'Atiende los laboratorios en su turno, registra asistencia, incidencias y objetos', false],
         ['DIR', 'Director de Carrera', 'Solicita reservas para eventos y consulta estadísticas', false],
-        ['EST', 'Estudiante FICCT', 'Estudiante de la FICCT (ej: auxiliar de cátedra) que solicita reservas de laboratorio', false],
+        ['EST', 'Estudiante', 'Estudiante de la FICCT (ej: auxiliar de cátedra) que solicita reservas de laboratorio', false],
     ];
 
     /** Permisos por rol de negocio (el Encargado recibe TODOS: ver Encargado::asegurarRol) */

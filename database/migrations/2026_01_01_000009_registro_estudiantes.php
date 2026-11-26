@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Schema;
  * CU1 - Registro de estudiantes de la FICCT (ej: auxiliares de cátedra que necesitan reservar laboratorios).
  *  - usuarios.estado admite PENDIENTE: la cuenta se crea así y el Encargado la aprueba.
  *  - datos del registro: carrera y para qué necesita los laboratorios.
- *  - rol EST "Estudiante FICCT" con permisos mínimos (ver laboratorios/disponibilidad, sus reservas).
+ *  - rol EST "Estudiante" con permisos mínimos (ver laboratorios/disponibilidad, sus reservas).
  */
 return new class extends Migration
 {
@@ -31,7 +31,7 @@ return new class extends Migration
         // En una base nueva (sin permisos aún) el rol lo crea SeguridadSeeder
         if (DB::table('permisos')->exists() && ! DB::table('roles')->where('codigo', 'EST')->exists()) {
             $rol = DB::table('roles')->insertGetId([
-                'codigo' => 'EST', 'nombre' => 'Estudiante FICCT', 'es_sistema' => false,
+                'codigo' => 'EST', 'nombre' => 'Estudiante', 'es_sistema' => false,
                 'descripcion' => 'Estudiante de la FICCT (ej: auxiliar de cátedra) que solicita reservas de laboratorio',
                 'created_at' => now(), 'updated_at' => now(),
             ]);

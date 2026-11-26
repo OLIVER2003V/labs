@@ -96,7 +96,7 @@ class PsaCupTest extends SistemaTestCase
         Semestre::where('estado', 'ACTIVO')->update(['estado' => 'CERRADO']);
         $this->postJson('/api/reservas', $datos + ['fecha' => $this->diaLibre(10)])->assertCreated();
 
-        $this->postJson('/api/reservas', $datos + ['fecha' => Carbon::today()->addYears(2)->toDateString()])
+        $this->postJson('/api/reservas', $datos + ['fecha' => Carbon::today()->addYears(2)->next(Carbon::WEDNESDAY)->toDateString()]) // nunca domingo: así falla por el límite de un año
             ->assertStatus(422)->assertJson(['message' => 'Solo se puede reservar con hasta un año de anticipación.']);
     }
 }
