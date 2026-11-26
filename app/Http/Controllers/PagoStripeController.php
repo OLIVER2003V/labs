@@ -162,13 +162,8 @@ class PagoStripeController extends Controller
                     $mensaje = "Pago recibido, pero la multa ya estaba {$multa->estado}: corresponde devolución.";
                 }
             }
+            // Sin aviso al Encargado por cada pago (evita la fatiga de notificaciones): los consulta en Pagos y Reportes
             $t->update(['estado' => 'APROBADA', 'autorizacion' => mb_substr($autorizacion ?? 'stripe', 0, 40), 'mensaje' => $mensaje]);
-
-            // El Encargado recibe el aviso de cada pago (campanita y, si hay correo configurado, también por email)
-            $t->loadMissing('usuario');
-            \App\Services\Notificador::aEncargados('Pago recibido: Bs '.number_format((float) $t->monto, 2),
-                "{$t->usuario?->nombre_completo} pagó Bs ".number_format((float) $t->monto, 2)." por \"{$t->descripcion}\" con tarjeta (Stripe). "
-                ."Transacción {$t->codigo}. $mensaje", '/pagos');
         });
     }
 

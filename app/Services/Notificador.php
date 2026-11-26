@@ -51,13 +51,6 @@ class Notificador
         }
     }
 
-    /** Avisa a los Encargados de Laboratorio (rol ENC) activos, ej: cada pago recibido */
-    public static function aEncargados(string $titulo, string $mensaje, ?string $url = null): void
-    {
-        User::whereHas('rol', fn ($q) => $q->where('codigo', \App\Support\Encargado::ROL))->where('estado', 'ACTIVO')
-            ->get()->each(fn ($u) => self::enviar($u, $titulo, $mensaje, $url));
-    }
-
     /**
      * Cancela reservas afectadas por un bloqueo o por un laboratorio fuera de servicio
      * y avisa a cada solicitante con el motivo.

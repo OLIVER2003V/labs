@@ -17,7 +17,7 @@ use Illuminate\Support\Str;
 /**
  * CU4 - Jerarquía de reservas: Hackathon/CUP/PSA > Examen > Capacitación/Conferencia > Clases > Prácticas de auxiliares.
  * También: regla de los 4 días, aprobación automática, auxiliares de apoyo, presencia del chat, código de usuario
- * y aviso de pagos al Encargado.
+ * y pagos sin avisos al Encargado.
  */
 class JerarquiaReservasTest extends SistemaTestCase
 {
@@ -238,7 +238,7 @@ class JerarquiaReservasTest extends SistemaTestCase
         $this->postJson('/api/usuarios', $base + ['codigo' => '123'])->assertCreated();
     }
 
-    public function test_cada_pago_confirmado_avisa_al_encargado(): void
+    public function test_los_pagos_confirmados_no_notifican_al_encargado(): void
     {
         $doc = User::where('email', 'docente@ficct.edu.bo')->first();
         $trx = Transaccion::forceCreate(['codigo' => 'TRX-PRUEBA-1', 'usuario_id' => $doc->id, 'pasarela' => 'stripe', 'estado' => 'PENDIENTE',
@@ -246,11 +246,9 @@ class JerarquiaReservasTest extends SistemaTestCase
         $antes = $this->avisosDe('encargado@ficct.edu.bo');
 
         PagoStripeController::confirmar($trx, 'pi_prueba');
-        PagoStripeController::confirmar($trx, 'pi_prueba'); // el webhook y la consulta pueden llegar los dos: un solo aviso
+        PagoStripeController::confirmar($trx, 'pi_prueba'); // el webhook y la consulta pueden llegar los dos
 
-        $this->assertSame($antes + 1, $this->avisosDe('encargado@ficct.edu.bo'));
-        $n = DB::table('notificaciones')->where('usuario_id', User::where('email', 'encargado@ficct.edu.bo')->value('id'))->orderByDesc('id')->first();
-        $this->assertStringContainsString('TRX-PRUEBA-1', $n->mensaje);
-        $this->assertStringContainsString('Bs 50.00', $n->titulo);
+        $this->assertSame('APROBADA', $trx->fresh()->estado);
+        $this->assertSame($antes, $this->avisosDe('encargado@ficct.edu.bo')); // sin avisos por cada pago (evita la fatiga)
     }
 }
