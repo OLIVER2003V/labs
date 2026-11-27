@@ -14,7 +14,9 @@ export function useColores() {
     const [c, setC] = useState({});
     useEffect(() => {
         const s = getComputedStyle(document.documentElement);
-        const v = (n) => s.getPropertyValue(`--c-${n}`).trim();
+        // si falta una variable en app.css se usa un color de respaldo (así el panel nunca se queda en "Cargando…")
+        const respaldo = { 'serie-1': '#2a78d6', 'serie-2': '#eb6834', 'serie-3': '#1baf7a', texto: '#1f2937', suave: '#6b7280', borde: '#d1d5db' };
+        const v = (n) => s.getPropertyValue(`--c-${n}`).trim() || respaldo[n] || '#6b7280';
         setC({
             primario: v('primario'), acento: v('acento'), exito: v('exito'), alerta: v('alerta'), peligro: v('peligro'),
             info: v('info'), texto: v('texto'), suave: v('suave'), borde: v('borde'), superficie: v('superficie'),

@@ -63,6 +63,23 @@
     --c-info: #1d6fa5;
     --c-info-tenue: #e0f0f9;
 }
+/*
+ * Colores de SERIES para gráficos (no son los de la interfaz: los de la marca son muy oscuros/claros para gráficos).
+ * Validados con el script de la guía de visualización: separables con daltonismo (ΔE >= 8) y con contraste
+ * sobre el fondo de cada tema, en claro y oscuro. Orden fijo: serie 1, 2, 3 (nunca se reciclan).
+ * NO BORRAR: el Panel de estadísticas y los gráficos de Reportes los necesitan.
+ */
+:root {
+    --c-serie-1: #2a78d6;
+    --c-serie-2: #eb6834;
+    --c-serie-3: #1baf7a;
+}
+[data-modo='oscuro'] {
+    --c-serie-1: #3987e5;
+    --c-serie-2: #d95926;
+    --c-serie-3: #199e70;
+}
+
 [data-tema='adultos'][data-modo='oscuro'] {
     --c-fondo: #08121f;
     --c-superficie: #0f1d30;
